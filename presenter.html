@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Presenter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;600&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0A0E1A; --blue:#4F8EF7; --grn:#10B981; --amb:#F59E0B; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { background: #06090f; color: #fff; font-family: 'DM Sans', sans-serif; display: flex; flex-direction: column; overflow: hidden; }
+  header { display: flex; align-items: center; gap: 24px; padding: 12px 20px; border-bottom: 1px solid rgba(79,142,247,.18); flex-shrink: 0; }
+  .title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .spacer { flex: 1; }
+  .clockbox { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: rgba(255,255,255,.6); display: flex; gap: 20px; align-items: center; }
+  .elapsed { color: var(--amb); font-size: 20px; font-weight: 600; min-width: 96px; text-align: right; }
+  .tbtn { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; padding: 7px 12px;
+    border-radius: 5px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.05); color: rgba(255,255,255,.75); cursor: pointer; }
+  .tbtn:hover { border-color: var(--blue); color: #fff; }
+  .tbtn.primary { border-color: rgba(16,185,129,.5); color: var(--grn); }
+  main { flex: 1; display: grid; grid-template-columns: 1fr 380px; gap: 16px; padding: 16px 20px; min-height: 0; }
+  .cur { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .frame { position: relative; background: #000; border: 1px solid rgba(79,142,247,.25); border-radius: 8px; overflow: hidden; flex: 1; min-height: 0; }
+  .frame iframe { width: 1920px; height: 1080px; border: 0; transform-origin: 0 0; position: absolute; top: 50%; left: 50%; pointer-events: none; }
+  .lab { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,.4); margin: 0 0 8px 2px; }
+  aside { display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+  .next .frame { aspect-ratio: 16/9; flex: none; }
+  .notes { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .notes .body { flex: 1; overflow: auto; background: rgba(79,142,247,.05); border: 1px solid rgba(79,142,247,.2);
+    border-radius: 8px; padding: 16px 18px; font-size: 17px; line-height: 1.55; color: rgba(255,255,255,.88); white-space: pre-wrap; }
+  .notes .body:empty::before { content: 'No notes for this slide.'; color: rgba(255,255,255,.3); }
+  footer { display: flex; align-items: center; gap: 16px; padding: 10px 20px 14px; flex-shrink: 0; }
+  .count { font-family: 'JetBrains Mono', monospace; font-size: 15px; color: rgba(255,255,255,.7); }
+  .hint { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(255,255,255,.3); }
+  .navbtn { font-size: 18px; width: 42px; height: 34px; border-radius: 5px; border: 1px solid rgba(255,255,255,.2);
+    background: rgba(255,255,255,.05); color: #fff; cursor: pointer; }
+</style>
+</head>
+<body>
+<header>
+  <div class="title" id="title">…</div>
+  <div class="spacer"></div>
+  <div class="clockbox">
+    <span id="clock">--:--</span>
+    <span class="elapsed" id="elapsed">00:00</span>
+    <button class="tbtn" id="timer-toggle">START</button>
+    <button class="tbtn" id="timer-reset">RESET</button>
+  </div>
+  <button class="tbtn primary" id="audience">▶ PLAY SLIDESHOW ⧉</button>
+</header>
+<main>
+  <div class="cur">
+    <div class="lab">Current slide</div>
+    <div class="frame" id="cur-frame"><iframe id="cur"></iframe></div>
+  </div>
+  <aside>
+    <div class="next">
+      <div class="lab">Next slide</div>
+      <div class="frame" id="next-frame"><iframe id="next"></iframe></div>
+    </div>
+    <div class="notes">
+      <div class="lab">Notes</div>
+      <div class="body" id="notes"></div>
+    </div>
+  </aside>
+</main>
+<footer>
+  <button class="navbtn" id="prev">←</button>
+  <button class="navbtn" id="next-btn">→</button>
+  <span class="count"><span id="cur-n">1</span> / <span id="total-n">?</span></span>
+  <div class="spacer"></div>
+  <span class="hint">← → SPACE navigate · HOME/END jump · timer starts on first advance</span>
+</footer>
+
+<script>
+(async () => {
+  const params = new URLSearchParams(location.search);
+  const deckPath = params.get('deck');
+  if (!deckPath) { document.getElementById('title').textContent = 'No deck specified'; return; }
+  const deckPathname = '/files/' + deckPath.split('/').map(encodeURIComponent).join('/');
+  // Slide-position sync goes through the server's SSE bus (same as the deck
+  // windows) so the presenter, slideshow and editor stay aligned across
+  // separate browsers and native app windows.
+  const clientId = Math.random().toString(36).slice(2);
+  function publish() {
+    fetch('/api/sync', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deck: deckPath, index, id: clientId }), keepalive: true,
+    }).catch(() => {});
+  }
+
+  // --- deck metadata: parse the source file (same origin) for notes/labels
+  let total = 0, notes = [], labels = [], skipped = new Set();
+  try {
+    const doc = new DOMParser().parseFromString(
+      await (await fetch(deckPathname + '?raw=1')).text(), 'text/html');
+    let legacy = [];
+    const legacyTag = doc.getElementById('speaker-notes');
+    if (legacyTag) { try { legacy = JSON.parse(legacyTag.textContent) || []; } catch {} }
+    const sections = Array.from(doc.querySelectorAll('deck-stage > section, x-import > section'));
+    total = sections.length;
+    sections.forEach((s, i) => {
+      notes[i] = s.getAttribute('data-speaker-notes') || legacy[i] || '';
+      labels[i] = s.getAttribute('data-label') || s.getAttribute('data-screen-label') || 'Slide ' + (i + 1);
+      if (s.hasAttribute('data-deck-skip')) skipped.add(i);
+    });
+    const t = doc.querySelector('title');
+    document.getElementById('title').textContent = (t ? t.textContent : deckPath) + ' — Presenter';
+  } catch (e) { console.error(e); }
+  document.getElementById('total-n').textContent = total || '?';
+
+  // --- preview iframes (deck pages in follow mode; _snthumb keeps chrome off)
+  const cur = document.getElementById('cur');
+  const nxt = document.getElementById('next');
+  cur.src = deckPathname + '?_snthumb=1&_dmfollow=cur#1';
+  nxt.src = deckPathname + '?_snthumb=1&_dmfollow=next#2';
+  function fit(frame, holder) {
+    const w = holder.clientWidth, h = holder.clientHeight;
+    const s = Math.min(w / 1920, h / 1080);
+    // transform-origin is 0 0, so scale from the top-left and center by
+    // offsetting with the *scaled* dimensions (a percentage translate would
+    // shift by the unscaled 1920×1080 and push the slide out of the frame).
+    frame.style.left = ((w - 1920 * s) / 2) + 'px';
+    frame.style.top = ((h - 1080 * s) / 2) + 'px';
+    frame.style.transform = 'scale(' + s + ')';
+  }
+  const cf = document.getElementById('cur-frame'), nf = document.getElementById('next-frame');
+  new ResizeObserver(() => fit(cur, cf)).observe(cf);
+  new ResizeObserver(() => fit(nxt, nf)).observe(nf);
+
+  // --- shared index
+  let index = 0;
+  function render() {
+    document.getElementById('cur-n').textContent = index + 1;
+    document.getElementById('notes').textContent = notes[index] || '';
+  }
+  function goTo(i) {
+    index = Math.max(0, Math.min(i, (total || 1) - 1));
+    render();
+    publish();          // drives the preview iframes + any slideshow window
+    startTimerOnce();
+  }
+  function step(dir) {
+    let i = index + dir;
+    while (skipped.has(i) && i > 0 && i < total - 1) i += dir;
+    goTo(i);
+  }
+  // Follow remote navigation (slideshow / editor advancing on their own).
+  const es = new EventSource('/api/sync?deck=' + encodeURIComponent(deckPath));
+  es.onmessage = (ev) => {
+    let m; try { m = JSON.parse(ev.data); } catch { return; }
+    if (m.id === clientId) return;
+    if (m.index !== index) { index = Math.max(0, Math.min(m.index, (total || 1) - 1)); render(); startTimerOnce(); }
+  };
+  // Re-publish once previews finish loading so late iframes catch up.
+  cur.addEventListener('load', () => setTimeout(publish, 300));
+  nxt.addEventListener('load', () => setTimeout(publish, 300));
+
+  // --- controls
+  document.getElementById('prev').addEventListener('click', () => step(-1));
+  document.getElementById('next-btn').addEventListener('click', () => step(1));
+  document.getElementById('audience').addEventListener('click', () => {
+    // The clean, shareable slideshow window (no rail/overlay/toolbar).
+    window.open(deckPathname + '?_dmshow=1#' + (index + 1), 'dm-slideshow');
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); step(1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); step(-1); }
+    else if (e.key === 'Home') goTo(0);
+    else if (e.key === 'End') goTo(total - 1);
+  });
+
+  // --- clock + elapsed timer
+  const clock = document.getElementById('clock');
+  setInterval(() => {
+    clock.textContent = new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  }, 1000);
+  let t0 = null, acc = 0, tick = null;
+  const elapsed = document.getElementById('elapsed');
+  const toggle = document.getElementById('timer-toggle');
+  function fmt(ms) {
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    return String(m).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+  }
+  function startTimer() {
+    if (tick) return;
+    t0 = Date.now();
+    tick = setInterval(() => { elapsed.textContent = fmt(acc + Date.now() - t0); }, 500);
+    toggle.textContent = 'PAUSE';
+  }
+  function pauseTimer() {
+    if (!tick) return;
+    acc += Date.now() - t0;
+    clearInterval(tick); tick = null;
+    toggle.textContent = 'START';
+  }
+  function startTimerOnce() { if (!tick && acc === 0) startTimer(); }
+  toggle.addEventListener('click', () => (tick ? pauseTimer() : startTimer()));
+  document.getElementById('timer-reset').addEventListener('click', () => {
+    pauseTimer(); acc = 0; elapsed.textContent = '00:00';
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

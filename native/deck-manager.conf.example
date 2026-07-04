@@ -1,0 +1,11 @@
+# Copy to deck-manager.conf (gitignored) and edit for your machine.
+
+# Folder that holds your decks. Baked into the app as its default; you can still
+# change it at runtime via File ▸ Open Workshop Folder…. Leave empty to have the
+# app default to ~/Desktop on first run.
+WORKSHOP_DIR="$HOME/Desktop/Decks"
+
+# Code-signing identity. "-" = ad-hoc (runs on this Mac only). For a signed app
+# that other Macs trust, use your Developer ID, e.g.:
+#   SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)"
+SIGN_IDENTITY="-"

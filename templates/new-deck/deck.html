@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>New Presentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0A0E1A; --blue:#4F8EF7; --red:#F43F5E; --grn:#10B981; --amb:#F59E0B; --purp:#A78BFA;
+    --fs:'Syne',sans-serif; --fm:'JetBrains Mono',monospace; --fb:'DM Sans',sans-serif;
+  }
+  *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #000; }
+  deck-stage:not(:defined) { visibility: hidden; }
+  deck-stage > section { background: var(--bg); color: #fff; font-family: var(--fs); overflow: hidden; position: relative; }
+</style>
+<script src="deck-stage.js"></script>
+</head>
+<body>
+<deck-stage width="1920" height="1080">
+
+<section data-label="Title" style="display:flex;flex-direction:column;justify-content:center;padding:88px 120px">
+  <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--blue),transparent)"></div>
+  <div style="font-family:var(--fm);font-size:15px;letter-spacing:3px;text-transform:uppercase;color:var(--blue);margin-bottom:28px">Kicker · Series · Year</div>
+  <div style="font-size:150px;font-weight:800;line-height:.9;letter-spacing:-4px">New<br>presentation</div>
+  <div style="font-family:var(--fb);font-size:34px;color:rgba(255,255,255,.55);margin-top:36px;max-width:1100px">Double-click any text to edit it. Right-click a thumbnail in the left rail to add, duplicate, skip or delete slides.</div>
+</section>
+
+<section data-label="First topic" style="display:flex;flex-direction:column;justify-content:center;padding:88px 120px">
+  <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--blue),transparent)"></div>
+  <div style="font-family:var(--fm);font-size:14px;letter-spacing:3px;text-transform:uppercase;color:var(--blue);margin-bottom:22px">Topic label</div>
+  <div style="font-size:72px;font-weight:800;letter-spacing:-2px;line-height:1;margin-bottom:56px">Slide headline</div>
+  <div style="display:flex;flex-direction:column;gap:30px;max-width:1350px">
+    <div style="display:flex;gap:22px;align-items:flex-start"><div style="width:9px;height:9px;border-radius:50%;background:var(--blue);flex-shrink:0;margin-top:16px"></div><div style="font-family:var(--fb);font-size:33px;line-height:1.4;color:rgba(255,255,255,.85)">First point — keep each line to a single idea.</div></div>
+    <div style="display:flex;gap:22px;align-items:flex-start"><div style="width:9px;height:9px;border-radius:50%;background:var(--blue);flex-shrink:0;margin-top:16px"></div><div style="font-family:var(--fb);font-size:33px;line-height:1.4;color:rgba(255,255,255,.85)">Second point with a little more detail if needed.</div></div>
+  </div>
+</section>
+
+</deck-stage>
+</body>
+</html>

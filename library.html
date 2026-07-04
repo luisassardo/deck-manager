@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Deck Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0A0E1A; --blue:#4F8EF7; --grn:#10B981; --amb:#F59E0B; --red:#F43F5E; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: #fff; font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+  body::before { content:''; position: fixed; inset: 0; pointer-events: none;
+    background: linear-gradient(rgba(79,142,247,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,142,247,.04) 1px, transparent 1px);
+    background-size: 80px 80px; }
+  header { display: flex; align-items: center; justify-content: space-between;
+    padding: 36px 48px 28px; border-bottom: 1px solid rgba(79,142,247,.15); position: relative; }
+  header::before { content:''; position: absolute; top:0; left:0; right:0; height:3px;
+    background: linear-gradient(90deg, var(--blue), transparent); }
+  h1 { font-family: 'Syne', sans-serif; font-size: 34px; font-weight: 800; letter-spacing: -1px; }
+  .sub { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 2px;
+    text-transform: uppercase; color: rgba(79,142,247,.7); margin-top: 6px; }
+  .btn { font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 1px;
+    padding: 10px 20px; border-radius: 6px; border: 1px solid rgba(79,142,247,.4);
+    background: rgba(79,142,247,.1); color: #fff; cursor: pointer; }
+  .btn:hover { background: rgba(79,142,247,.22); }
+  .btn.primary { background: var(--blue); border-color: var(--blue); color: #06101f; font-weight: 600; }
+  .btn.primary:hover { filter: brightness(1.1); }
+  main { padding: 40px 48px; position: relative; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 28px; }
+  .card { background: rgba(79,142,247,.04); border: 1px solid rgba(79,142,247,.18);
+    border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+  .card:hover { border-color: rgba(79,142,247,.45); }
+  .thumb { position: relative; aspect-ratio: 16/9; background: #000; overflow: hidden; cursor: pointer; }
+  .thumb iframe { width: 1920px; height: 1080px; border: 0; transform-origin: 0 0; pointer-events: none; background: #000; }
+  .thumb .veil { position: absolute; inset: 0; }
+  .meta { padding: 18px 20px 8px; }
+  .title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: -.3px; }
+  .info { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px;
+    color: rgba(255,255,255,.4); margin-top: 6px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; margin-left: 8px;
+    background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.4); color: var(--amb); }
+  .actions { display: flex; gap: 8px; padding: 14px 20px 18px; flex-wrap: wrap; }
+  .act { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; letter-spacing: .5px;
+    padding: 7px 13px; border-radius: 5px; border: 1px solid rgba(255,255,255,.15);
+    background: rgba(255,255,255,.04); color: rgba(255,255,255,.75); cursor: pointer; }
+  .act:hover { border-color: rgba(79,142,247,.6); color: #fff; }
+  .act.go { border-color: rgba(16,185,129,.45); color: var(--grn); }
+  .act.go:hover { background: rgba(16,185,129,.1); }
+  .empty { color: rgba(255,255,255,.45); font-size: 17px; padding: 60px 0; text-align: center; }
+  .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 8px;
+    background: #101a2e; border: 1px solid rgba(79,142,247,.4); font-size: 14px;
+    opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 50; }
+  .toast[data-on] { opacity: 1; }
+  .toast[data-err] { border-color: rgba(244,63,94,.6); color: #ffb3c0; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Deck Manager</h1>
+    <div class="sub" id="root-label">HTML presentations</div>
+  </div>
+  <button class="btn primary" id="new-deck">+ New deck</button>
+</header>
+<main>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" hidden>No presentations found in this folder yet.</div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const grid = document.getElementById('grid');
+const toastEl = document.getElementById('toast');
+let toastTimer;
+
+function toast(msg, err) {
+  toastEl.textContent = msg;
+  toastEl.toggleAttribute('data-err', !!err);
+  toastEl.setAttribute('data-on', '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.removeAttribute('data-on'), 3200);
+}
+
+async function api(url, body) {
+  const r = await fetch(url, body
+    ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+    : undefined);
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || r.statusText);
+  return data;
+}
+
+function deckUrl(d) { return '/files/' + d.path.split('/').map(encodeURIComponent).join('/'); }
+function presenterUrl(d) { return '/__dm/presenter.html?deck=' + encodeURIComponent(d.path); }
+function slideshowUrl(d) { return deckUrl(d) + '?_dmshow=1#1'; }
+function pdfUrl(d) { return '/api/pdf?path=' + encodeURIComponent(d.path); }
+
+function fmtDate(ms) {
+  return new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function card(d) {
+  const el = document.createElement('div');
+  el.className = 'card';
+
+  const thumb = document.createElement('div');
+  thumb.className = 'thumb';
+  const frame = document.createElement('iframe');
+  // _snthumb makes deck-stage suppress its rail; loading=lazy keeps big
+  // decks from all booting at once.
+  frame.src = deckUrl(d) + '?_snthumb=1#1';
+  frame.loading = 'lazy';
+  frame.tabIndex = -1;
+  thumb.append(frame, Object.assign(document.createElement('div'), { className: 'veil' }));
+  const scale = () => { frame.style.transform = 'scale(' + (thumb.clientWidth / 1920) + ')'; };
+  new ResizeObserver(scale).observe(thumb);
+  thumb.addEventListener('click', () => { location.href = deckUrl(d); });
+
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  const title = document.createElement('div');
+  title.className = 'title';
+  title.textContent = d.title;
+  const info = document.createElement('div');
+  info.className = 'info';
+  info.textContent = (d.slides != null ? d.slides + ' slides · ' : '') + fmtDate(d.mtime);
+  if (d.bundled) {
+    const b = document.createElement('span');
+    b.className = 'badge';
+    b.textContent = 'BUNDLED';
+    info.appendChild(b);
+  }
+  meta.append(title, info);
+
+  const actions = document.createElement('div');
+  actions.className = 'actions';
+  const mk = (label, cls, fn) => {
+    const b = document.createElement('button');
+    b.className = 'act' + (cls ? ' ' + cls : '');
+    b.textContent = label;
+    b.addEventListener('click', fn);
+    actions.appendChild(b);
+  };
+  if (d.bundled) {
+    mk('View', '', () => { location.href = deckUrl(d); });
+    mk('Import to edit', 'go', async () => {
+      try {
+        const r = await api('/api/unbundle', { path: d.path });
+        toast('Imported → ' + r.path);
+        load();
+      } catch (e) { toast(e.message, true); }
+    });
+  } else {
+    mk('Open', '', () => { location.href = deckUrl(d); });
+    mk('Slideshow', 'go', () => { window.open(slideshowUrl(d), 'dm-slideshow-' + d.path); });
+    mk('Present', 'go', () => { window.open(presenterUrl(d), '_blank'); });
+    mk('PDF', '', () => { window.open(pdfUrl(d), '_blank'); });
+    mk('Duplicate', '', async () => {
+      const name = prompt('Name for the copy:', d.title + ' copy');
+      if (!name) return;
+      try { await api('/api/duplicate-deck', { path: d.path, name }); toast('Duplicated'); load(); }
+      catch (e) { toast(e.message, true); }
+    });
+    mk('Rename', '', async () => {
+      const name = prompt('New name:', d.title);
+      if (!name || name === d.title) return;
+      try { await api('/api/rename-deck', { path: d.path, name }); toast('Renamed'); load(); }
+      catch (e) { toast(e.message, true); }
+    });
+  }
+
+  el.append(thumb, meta, actions);
+  return el;
+}
+
+async function load() {
+  try {
+    const decks = await api('/api/decks');
+    grid.replaceChildren(...decks.map(card));
+    document.getElementById('empty').hidden = decks.length > 0;
+  } catch (e) { toast(e.message, true); }
+}
+
+document.getElementById('new-deck').addEventListener('click', async () => {
+  const name = prompt('Name for the new presentation:');
+  if (!name) return;
+  try {
+    const r = await api('/api/new-deck', { name });
+    toast('Created');
+    location.href = '/files/' + r.path.split('/').map(encodeURIComponent).join('/');
+  } catch (e) { toast(e.message, true); }
+});
+
+load();
+</script>
+</body>
+</html>

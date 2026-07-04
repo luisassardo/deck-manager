@@ -1,0 +1,19 @@
+# Build output
+native/DeckManager.app/
+native/DeckManager
+native/*.zip
+native/*.o
+
+# Local, machine-specific build config (paths, signing identity)
+native/deck-manager.conf
+
+# Deck backups (written into the decks folder, but ignore if ever present here)
+.deck-manager-backups/
+.backups/
+
+# macOS
+.DS_Store
+
+# Node (none used, but just in case)
+node_modules/
+npm-debug.log*
