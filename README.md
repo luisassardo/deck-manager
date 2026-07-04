@@ -5,8 +5,15 @@ A local, zero-dependency tool for creating and managing HTML presentations
 library, inline editing, presenter view, a clean screen-shareable slideshow
 window, and one-click PDF export. macOS native app + plain-browser modes.
 
+![The Deck Manager library](docs/library.png)
+
 Requires [Node.js](https://nodejs.org) (any recent version). The native app
 also needs macOS + the Xcode Command Line Tools (`xcode-select --install`).
+
+Every deck is one manageable card; **Slideshow** opens a chromeless,
+full-bleed window you can screen-share on its own:
+
+![A slideshow window](docs/slideshow.png)
 
 ## Your decks live wherever you want
 
