@@ -18,6 +18,7 @@
  *   POST /api/new-deck          {name} → scaffold from templates/new-deck
  *   POST /api/duplicate-deck    {path, name}
  *   POST /api/rename-deck       {path, name}
+ *   POST /api/delete-deck       {path} → move a deck to ROOT/.deck-manager-trash
  *   POST /api/unbundle          {path} → extract a bundled single-file deck
  *   GET  /api/sync?deck=        Server-Sent Events stream of {index} for a deck
  *   POST /api/sync              {deck, index, id} → fan out to sync subscribers
@@ -268,6 +269,23 @@ async function renameDeck(rel, name) {
   return { path: path.relative(ROOT, dst) };
 }
 
+/** Delete a deck by moving it to ROOT/.deck-manager-trash (reversible — the
+ *  user can restore it from there or empty it). Moves the deck's own folder
+ *  when it lives in one, else just the loose .html file. */
+async function deleteDeck(rel) {
+  const file = safePath(rel);
+  if (file === ROOT) throw new HttpError(400, 'Invalid target');
+  const dir = path.dirname(file);
+  const target = dir === ROOT ? file : dir;   // loose file vs the deck's folder
+  if (target === ROOT) throw new HttpError(400, 'Invalid target');
+  const trash = path.join(ROOT, '.deck-manager-trash');
+  await fsp.mkdir(trash, { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const dest = path.join(trash, stamp + '__' + path.basename(target));
+  await fsp.rename(target, dest);
+  return { trashed: path.relative(ROOT, dest) };
+}
+
 async function slideTemplates() {
   const dir = path.join(DM_DIR, 'templates', 'slides');
   let files;
@@ -444,6 +462,7 @@ const server = http.createServer(async (req, res) => {
       if (p === '/api/new-deck') return json(res, 200, await newDeck(body.name));
       if (p === '/api/duplicate-deck') return json(res, 200, await duplicateDeck(body.path, body.name));
       if (p === '/api/rename-deck') return json(res, 200, await renameDeck(body.path, body.name));
+      if (p === '/api/delete-deck') return json(res, 200, await deleteDeck(body.path));
       if (p === '/api/unbundle') {
         const file = safePath(body.path);
         const outDir = path.join(path.dirname(file), path.basename(file, '.html'));

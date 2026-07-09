@@ -239,6 +239,32 @@ struct WebView: NSViewRepresentable {
         }
         private var lastDest: URL?
 
+        // JavaScript dialogs — WKWebView drops alert()/confirm()/prompt() unless
+        // these are implemented, which is why New deck / Rename / Duplicate /
+        // Delete (all prompt/confirm based) did nothing inside the app.
+        func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String,
+                     initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+            let a = NSAlert(); a.messageText = message; a.addButton(withTitle: "OK")
+            a.runModal(); completionHandler()
+        }
+        func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String,
+                     initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
+            let a = NSAlert(); a.messageText = message
+            a.addButton(withTitle: "OK"); a.addButton(withTitle: "Cancel")
+            completionHandler(a.runModal() == .alertFirstButtonReturn)
+        }
+        func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String,
+                     defaultText: String?, initiatedByFrame frame: WKFrameInfo,
+                     completionHandler: @escaping (String?) -> Void) {
+            let a = NSAlert(); a.messageText = prompt
+            a.addButton(withTitle: "OK"); a.addButton(withTitle: "Cancel")
+            let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 24))
+            field.stringValue = defaultText ?? ""
+            a.accessoryView = field
+            a.window.initialFirstResponder = field
+            completionHandler(a.runModal() == .alertFirstButtonReturn ? field.stringValue : nil)
+        }
+
         static func titleFor(_ url: URL) -> String {
             let deck = URLComponents(url: url, resolvingAgainstBaseURL: false)?
                 .queryItems?.first(where: { $0.name == "deck" })?.value

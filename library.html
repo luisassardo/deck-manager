@@ -47,6 +47,8 @@
   .act:hover { border-color: rgba(79,142,247,.6); color: #fff; }
   .act.go { border-color: rgba(16,185,129,.45); color: var(--grn); }
   .act.go:hover { background: rgba(16,185,129,.1); }
+  .act.danger { border-color: rgba(244,63,94,.4); color: var(--red); }
+  .act.danger:hover { background: rgba(244,63,94,.12); border-color: var(--red); color: #fff; }
   .empty { color: rgba(255,255,255,.45); font-size: 17px; padding: 60px 0; text-align: center; }
   .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 8px;
     background: #101a2e; border: 1px solid rgba(79,142,247,.4); font-size: 14px;
@@ -166,6 +168,11 @@ function card(d) {
       const name = prompt('New name:', d.title);
       if (!name || name === d.title) return;
       try { await api('/api/rename-deck', { path: d.path, name }); toast('Renamed'); load(); }
+      catch (e) { toast(e.message, true); }
+    });
+    mk('Delete', 'danger', async () => {
+      if (!confirm('Delete “' + d.title + '”?\n\nIt will be moved to a .deck-manager-trash folder next to your decks, so you can still recover it.')) return;
+      try { await api('/api/delete-deck', { path: d.path }); toast('Moved to trash'); load(); }
       catch (e) { toast(e.message, true); }
     });
   }
