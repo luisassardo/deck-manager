@@ -111,6 +111,23 @@ function isDeckHtml(txt) {
 }
 function isBundle(txt) { return txt.includes('__bundler/manifest'); }
 
+/** A self-contained HTML slide deck that is NOT a deck-stage deck (its own
+ *  slide engine). Listed in the library as "external": openable / presentable
+ *  as a window / manageable, but not editable with the deck-stage tools. */
+function isExternalDeck(txt) {
+  if (isDeckHtml(txt) || isBundle(txt)) return false;
+  if (!/<html[\s>]/i.test(txt) || !/<body[\s>]/i.test(txt)) return false; // full doc only
+  const signals = [
+    /class="[^"]*\bslides?\b/i,          // .slide / .slides
+    /\bid="(deck|stage|slides?|viewport)"/i,
+    /class="(deck|reveal|slides|impress)"/i,
+    /<section[\s>][\s\S]*<section[\s>]/i, // multiple <section>s
+    /<title>[^<]*(deck|slides?|presentation)/i,
+    /(keydown|keyup)[\s\S]{0,400}(ArrowRight|ArrowLeft|PageDown|" ")/i, // slide nav
+  ];
+  return signals.some((re) => re.test(txt));
+}
+
 async function findDecks() {
   const out = [];
   async function walk(dir, depth) {
@@ -125,8 +142,10 @@ async function findDecks() {
       } else if (e.name.toLowerCase().endsWith('.html')) {
         let txt;
         try { txt = await fsp.readFile(p, 'utf8'); } catch { continue; }
-        if (!isDeckHtml(txt)) continue;
-        const bundled = isBundle(txt);
+        const deckStage = isDeckHtml(txt);
+        const external = !deckStage && isExternalDeck(txt);
+        if (!deckStage && !external) continue;
+        const bundled = deckStage && isBundle(txt);
         // A bundled file whose import folder already exists is redundant —
         // the editable folder version represents it in the library.
         if (bundled && fs.existsSync(p.replace(/\.html$/i, ''))) continue;
@@ -138,8 +157,9 @@ async function findDecks() {
         out.push({
           path: rel,
           title,
-          slides: bundled ? null : countSlides(txt),
+          slides: (bundled || external) ? null : countSlides(txt),
           bundled,
+          external,
           mtime: st.mtimeMs,
         });
       }
@@ -406,10 +426,10 @@ async function exportPdf(res, rel) {
 
 // ----------------------------------------------------------------- serve
 
-/** Inject the manager's client scripts into a served deck page. */
-function injectScripts(txt) {
-  const tags = '<script src="/__dm/edit-mode.js" defer></script>' +
-               '<script src="/__dm/presenter.js" defer></script>\n';
+/** Inject client script(s) before </body>. deck-stage decks get the full
+ *  editor + presenter; external decks get only a minimal "back to library" bar. */
+function injectScripts(txt, srcs) {
+  const tags = srcs.map((s) => `<script src="${s}" defer></script>`).join('') + '\n';
   const at = txt.lastIndexOf('</body>');
   return at >= 0 ? txt.slice(0, at) + tags + txt.slice(at) : txt + tags;
 }
@@ -422,7 +442,11 @@ async function serveFile(res, file, { inject = false } = {}) {
   const mime = MIME[ext] || 'application/octet-stream';
   if (ext === '.html' && inject) {
     let txt = await fsp.readFile(file, 'utf8');
-    if (isDeckHtml(txt) && !isBundle(txt)) txt = injectScripts(txt);
+    if (isDeckHtml(txt) && !isBundle(txt)) {
+      txt = injectScripts(txt, ['/__dm/edit-mode.js', '/__dm/presenter.js']);
+    } else if (isExternalDeck(txt)) {
+      txt = injectScripts(txt, ['/__dm/external-mode.js']);
+    }
     res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'no-store' });
     return res.end(txt);
   }

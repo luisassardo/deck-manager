@@ -40,6 +40,7 @@
     color: rgba(255,255,255,.4); margin-top: 6px; }
   .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; margin-left: 8px;
     background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.4); color: var(--amb); }
+  .badge.ext { background: rgba(167,139,250,.12); border-color: rgba(167,139,250,.45); color: #A78BFA; }
   .actions { display: flex; gap: 8px; padding: 14px 20px 18px; flex-wrap: wrap; }
   .act { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; letter-spacing: .5px;
     padding: 7px 13px; border-radius: 5px; border: 1px solid rgba(255,255,255,.15);
@@ -127,10 +128,11 @@ function card(d) {
   const info = document.createElement('div');
   info.className = 'info';
   info.textContent = (d.slides != null ? d.slides + ' slides · ' : '') + fmtDate(d.mtime);
-  if (d.bundled) {
+  if (d.bundled || d.external) {
     const b = document.createElement('span');
-    b.className = 'badge';
-    b.textContent = 'BUNDLED';
+    b.className = 'badge' + (d.external ? ' ext' : '');
+    b.textContent = d.bundled ? 'BUNDLED' : 'EXTERNAL';
+    b.title = d.external ? 'A self-contained deck with its own slide engine — open, present as a window, and manage it here; deep editing is deck-stage-only.' : '';
     info.appendChild(b);
   }
   meta.append(title, info);
@@ -144,20 +146,8 @@ function card(d) {
     b.addEventListener('click', fn);
     actions.appendChild(b);
   };
-  if (d.bundled) {
-    mk('View', '', () => { location.href = deckUrl(d); });
-    mk('Import to edit', 'go', async () => {
-      try {
-        const r = await api('/api/unbundle', { path: d.path });
-        toast('Imported → ' + r.path);
-        load();
-      } catch (e) { toast(e.message, true); }
-    });
-  } else {
-    mk('Open', '', () => { location.href = deckUrl(d); });
-    mk('Slideshow', 'go', () => { window.open(slideshowUrl(d), 'dm-slideshow-' + d.path); });
-    mk('Present', 'go', () => { window.open(presenterUrl(d), '_blank'); });
-    mk('PDF', '', () => { window.open(pdfUrl(d), '_blank'); });
+  // Duplicate / Rename / Delete work on any deck (file/folder operations).
+  const addManageButtons = () => {
     mk('Duplicate', '', async () => {
       const name = prompt('Name for the copy:', d.title + ' copy');
       if (!name) return;
@@ -175,6 +165,29 @@ function card(d) {
       try { await api('/api/delete-deck', { path: d.path }); toast('Moved to trash'); load(); }
       catch (e) { toast(e.message, true); }
     });
+  };
+
+  if (d.bundled) {
+    mk('View', '', () => { location.href = deckUrl(d); });
+    mk('Import to edit', 'go', async () => {
+      try {
+        const r = await api('/api/unbundle', { path: d.path });
+        toast('Imported → ' + r.path);
+        load();
+      } catch (e) { toast(e.message, true); }
+    });
+  } else if (d.external) {
+    // Non-deck-stage deck: open / share as a window / export; no deck-stage editing.
+    mk('Open', '', () => { location.href = deckUrl(d); });
+    mk('Window', 'go', () => { window.open(deckUrl(d), 'dm-ext-' + d.path); });
+    mk('PDF', '', () => { window.open(pdfUrl(d), '_blank'); });
+    addManageButtons();
+  } else {
+    mk('Open', '', () => { location.href = deckUrl(d); });
+    mk('Slideshow', 'go', () => { window.open(slideshowUrl(d), 'dm-slideshow-' + d.path); });
+    mk('Present', 'go', () => { window.open(presenterUrl(d), '_blank'); });
+    mk('PDF', '', () => { window.open(pdfUrl(d), '_blank'); });
+    addManageButtons();
   }
 
   el.append(thumb, meta, actions);

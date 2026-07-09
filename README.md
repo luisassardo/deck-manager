@@ -19,8 +19,20 @@ full-bleed window you can screen-share on its own:
 
 The tool is decoupled from your presentations. Point it at any folder of decks
 via the `DECK_MANAGER_ROOT` environment variable (browser mode) or **File ▸
-Open Workshop Folder…** (native app). It scans that folder for `.html` files
-containing a `<deck-stage>` and lists them.
+Open Workshop Folder…** (native app). It scans that folder for HTML decks and
+lists them — just drop a deck's `.html` (ideally in its own subfolder with its
+assets) into the folder and refresh.
+
+Two kinds of deck are recognised:
+
+- **`<deck-stage>` decks** — the fully-featured format: inline editing,
+  thumbnail rail, presenter view, synced slideshow window, and clean PDF export.
+- **External decks** — any other self-contained HTML presentation (its own
+  slide engine, e.g. a one-file deck from another tool). These are listed with
+  an `EXTERNAL` badge; you can **Open** them, pop them into their own **Window**
+  to screen-share, export a best-effort **PDF**, and Duplicate / Rename / Delete
+  them. Deep editing is deck-stage-only — the deck keeps its own design and
+  controls untouched (the manager only overlays a small, fade-out toolbar).
 
 ## Start
 
