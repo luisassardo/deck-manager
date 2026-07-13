@@ -18,6 +18,7 @@
  *   POST /api/new-deck          {name} → scaffold from templates/new-deck
  *   POST /api/duplicate-deck    {path, name}
  *   POST /api/rename-deck       {path, name}
+ *   POST /api/move-deck         {path, folder} → move a deck into ROOT/<folder>
  *   POST /api/delete-deck       {path} → move a deck to ROOT/.deck-manager-trash
  *   POST /api/unbundle          {path} → extract a bundled single-file deck
  *   GET  /api/sync?deck=        Server-Sent Events stream of {index} for a deck
@@ -154,12 +155,17 @@ async function findDecks() {
           ? e.name.replace(/\.html$/i, '')
           : ((txt.match(/<title>([^<]*)<\/title>/i) || [])[1] || e.name.replace(/\.html$/i, '')).trim();
         const st = await fsp.stat(p);
+        // Group = the folder chain above the deck's movable unit ('' = top
+        // level). A deck-with-assets folder is the unit, so it doesn't count
+        // as a group of its own; a category folder holding several decks does.
+        const unit = deckUnit(p);
         out.push({
           path: rel,
           title,
           slides: (bundled || external) ? null : countSlides(txt),
           bundled,
           external,
+          group: path.relative(ROOT, path.dirname(unit.target)) || '',
           mtime: st.mtimeMs,
         });
       }
@@ -248,22 +254,49 @@ async function newDeck(name) {
   return { path: path.relative(ROOT, dst) };
 }
 
+/** The movable unit for a deck: its containing folder when the deck is the
+ *  folder's ONLY .html (the folder holds the deck + its assets), else just the
+ *  .html file itself. Several decks may share a category folder (e.g. OSINT/
+ *  holding three day-slides) — file ops must never take siblings with them. */
+// A deck "owns" its folder only when everything else in it is recognizably a
+// web asset of the deck. Any real document (.key, .docx, .pdf, video, another
+// tool's files) marks the folder as shared/topic material — then file ops touch
+// ONLY the .html. Misclassification errs toward file-only, which is the safe
+// direction: worst case assets stay behind, but user materials are never
+// dragged around or trashed.
+const ASSET_FILE_RE = /\.(m?js|css|json|map|png|jpe?g|gif|webp|svg|ico|avif|woff2?|ttf|otf|eot|txt)$/i;
+const ASSET_DIR_NAMES = new Set(['assets', 'asset', 'images', 'img', 'fonts', 'media', 'files', 'static', 'lib', 'css', 'js', 'vendor', 'uploads']);
+
+function deckUnit(file) {
+  const dir = path.dirname(file);
+  if (dir === ROOT) return { target: file, ownsDir: false };
+  const entries = fs.readdirSync(dir, { withFileTypes: true }).filter((e) => !e.name.startsWith('.'));
+  const htmlCount = entries.filter((e) => e.isFile() && e.name.toLowerCase().endsWith('.html')).length;
+  const others = entries.filter((e) => !(e.isFile() && e.name.toLowerCase().endsWith('.html')));
+  const allAssets = others.length > 0 && others.every((e) =>
+    e.isDirectory() ? ASSET_DIR_NAMES.has(e.name.toLowerCase()) : ASSET_FILE_RE.test(e.name));
+  const owns = htmlCount === 1 && allAssets;
+  return { target: owns ? dir : file, ownsDir: owns };
+}
+
 async function duplicateDeck(rel, name) {
   name = sanitizeName(name);
   const file = safePath(rel);
-  const srcDir = path.dirname(file);
-  const dstDir = path.join(ROOT, name);
-  if (fs.existsSync(dstDir)) throw new HttpError(409, 'A folder named "' + name + '" already exists');
+  const { ownsDir } = deckUnit(file);
+  const parent = ownsDir ? path.dirname(path.dirname(file)) : path.dirname(file);
   let dst;
-  if (srcDir === ROOT) {
-    // Loose top-level deck file → give the copy its own folder.
-    await fsp.mkdir(dstDir);
-    dst = path.join(dstDir, name + '.html');
-    await fsp.copyFile(file, dst);
-  } else {
-    await copyDir(srcDir, dstDir);
+  if (ownsDir) {
+    // Copy the deck's folder (with assets) next to the original.
+    const dstDir = path.join(parent, name);
+    if (fs.existsSync(dstDir)) throw new HttpError(409, '"' + name + '" already exists');
+    await copyDir(path.dirname(file), dstDir);
     dst = path.join(dstDir, name + '.html');
     await fsp.rename(path.join(dstDir, path.basename(file)), dst);
+  } else {
+    // Shared folder or loose root file → copy just the file, same folder.
+    dst = path.join(parent, name + '.html');
+    if (fs.existsSync(dst)) throw new HttpError(409, '"' + name + '" already exists');
+    await fsp.copyFile(file, dst);
   }
   await fsp.writeFile(dst, retitle(await fsp.readFile(dst, 'utf8'), name));
   return { path: path.relative(ROOT, dst) };
@@ -272,31 +305,30 @@ async function duplicateDeck(rel, name) {
 async function renameDeck(rel, name) {
   name = sanitizeName(name);
   const file = safePath(rel);
-  const dir = path.dirname(file);
+  const { ownsDir } = deckUnit(file);
   let dst;
-  if (dir === ROOT) {
-    dst = path.join(ROOT, name + '.html');
-    if (fs.existsSync(dst)) throw new HttpError(409, 'Already exists');
-    await fsp.rename(file, dst);
-  } else {
+  if (ownsDir) {
+    const dir = path.dirname(file);
     const newDir = path.join(path.dirname(dir), name);
     if (fs.existsSync(newDir)) throw new HttpError(409, 'Already exists');
     await fsp.rename(dir, newDir);
     dst = path.join(newDir, name + '.html');
     await fsp.rename(path.join(newDir, path.basename(file)), dst);
+  } else {
+    dst = path.join(path.dirname(file), name + '.html');
+    if (fs.existsSync(dst)) throw new HttpError(409, 'Already exists');
+    await fsp.rename(file, dst);
   }
   await fsp.writeFile(dst, retitle(await fsp.readFile(dst, 'utf8'), name));
   return { path: path.relative(ROOT, dst) };
 }
 
 /** Delete a deck by moving it to ROOT/.deck-manager-trash (reversible — the
- *  user can restore it from there or empty it). Moves the deck's own folder
- *  when it lives in one, else just the loose .html file. */
+ *  user can restore it from there or empty it). */
 async function deleteDeck(rel) {
   const file = safePath(rel);
   if (file === ROOT) throw new HttpError(400, 'Invalid target');
-  const dir = path.dirname(file);
-  const target = dir === ROOT ? file : dir;   // loose file vs the deck's folder
+  const { target } = deckUnit(file);
   if (target === ROOT) throw new HttpError(400, 'Invalid target');
   const trash = path.join(ROOT, '.deck-manager-trash');
   await fsp.mkdir(trash, { recursive: true });
@@ -304,6 +336,35 @@ async function deleteDeck(rel) {
   const dest = path.join(trash, stamp + '__' + path.basename(target));
   await fsp.rename(target, dest);
   return { trashed: path.relative(ROOT, dest) };
+}
+
+/** Move a deck (its unit — folder-with-assets or single file) into a group
+ *  folder under ROOT ("A" or "A/B"). Empty folder name = the top level. */
+async function moveDeck(rel, folder) {
+  folder = String(folder || '').split('/')
+    .map((s) => s.replace(/[\\:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim())
+    .filter(Boolean).join('/');
+  if (folder.split('/').some((s) => s.startsWith('.') || SCAN_SKIP.has(s))) {
+    throw new HttpError(400, 'Invalid folder name');
+  }
+  const file = safePath(rel);
+  const { target, ownsDir } = deckUnit(file);
+  const destDir = folder ? safePath(folder) : ROOT;
+  if (path.dirname(target) === destDir) return { path: rel };   // already there
+  const dest = path.join(destDir, path.basename(target));
+  if (fs.existsSync(dest)) throw new HttpError(409, '"' + path.basename(target) + '" already exists in ' + (folder || 'the top level'));
+  await fsp.mkdir(destDir, { recursive: true });
+  const srcDir = path.dirname(target);
+  await fsp.rename(target, dest);
+  // A wrapper/category folder left empty by the move is noise — drop it.
+  if (srcDir !== ROOT) {
+    try {
+      const left = (await fsp.readdir(srcDir)).filter((f) => f !== '.DS_Store');
+      if (!left.length) await fsp.rm(srcDir, { recursive: true });
+    } catch {}
+  }
+  const newFile = ownsDir ? path.join(dest, path.basename(file)) : dest;
+  return { path: path.relative(ROOT, newFile) };
 }
 
 async function slideTemplates() {
@@ -486,6 +547,7 @@ const server = http.createServer(async (req, res) => {
       if (p === '/api/new-deck') return json(res, 200, await newDeck(body.name));
       if (p === '/api/duplicate-deck') return json(res, 200, await duplicateDeck(body.path, body.name));
       if (p === '/api/rename-deck') return json(res, 200, await renameDeck(body.path, body.name));
+      if (p === '/api/move-deck') return json(res, 200, await moveDeck(body.path, body.folder));
       if (p === '/api/delete-deck') return json(res, 200, await deleteDeck(body.path));
       if (p === '/api/unbundle') {
         const file = safePath(body.path);

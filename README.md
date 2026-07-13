@@ -23,6 +23,14 @@ Open Workshop Folder…** (native app). It scans that folder for HTML decks and
 lists them — just drop a deck's `.html` (ideally in its own subfolder with its
 assets) into the folder and refresh.
 
+The library groups decks by their folder, with a section per folder — so you
+can organise by course, language, or topic. Each card has a **Move…** action
+that relocates the deck into any folder under the decks root (type a new name
+to create one). Moving is safe by design: a deck travels together with its
+assets only when its folder contains nothing but the deck and web assets;
+folders holding other materials (documents, videos, other decks) are treated
+as shared and only the deck's `.html` moves.
+
 Two kinds of deck are recognised:
 
 - **`<deck-stage>` decks** — the fully-featured format: inline editing,

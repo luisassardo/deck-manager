@@ -28,6 +28,13 @@
   .btn.primary:hover { filter: brightness(1.1); }
   main { padding: 40px 48px; position: relative; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 28px; }
+  .ghead { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600;
+    letter-spacing: 3px; text-transform: uppercase; color: rgba(79,142,247,.85);
+    margin: 44px 0 18px; padding-bottom: 10px; border-bottom: 1px solid rgba(79,142,247,.15);
+    display: flex; align-items: center; gap: 10px; }
+  .ghead::before { content: '▸'; color: rgba(79,142,247,.5); }
+  #groups > .grid:first-child { margin-top: 0; }
+  #groups > .grid { margin-bottom: 8px; }
   .card { background: rgba(79,142,247,.04); border: 1px solid rgba(79,142,247,.18);
     border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
   .card:hover { border-color: rgba(79,142,247,.45); }
@@ -67,13 +74,14 @@
   <button class="btn primary" id="new-deck">+ New deck</button>
 </header>
 <main>
-  <div class="grid" id="grid"></div>
+  <div id="groups"></div>
   <div class="empty" id="empty" hidden>No presentations found in this folder yet.</div>
 </main>
 <div class="toast" id="toast"></div>
 
 <script>
-const grid = document.getElementById('grid');
+const groupsEl = document.getElementById('groups');
+let allGroups = [];   // existing group folders, offered by the Move… prompt
 const toastEl = document.getElementById('toast');
 let toastTimer;
 
@@ -160,6 +168,13 @@ function card(d) {
       try { await api('/api/rename-deck', { path: d.path, name }); toast('Renamed'); load(); }
       catch (e) { toast(e.message, true); }
     });
+    mk('Move…', '', async () => {
+      const hint = allGroups.length ? '\nExisting folders: ' + allGroups.join(' · ') : '';
+      const folder = prompt('Move to folder (leave empty for the top level).' + hint, d.group || '');
+      if (folder === null || folder.trim() === (d.group || '')) return;
+      try { await api('/api/move-deck', { path: d.path, folder: folder.trim() }); toast('Moved'); load(); }
+      catch (e) { toast(e.message, true); }
+    });
     mk('Delete', 'danger', async () => {
       if (!confirm('Delete “' + d.title + '”?\n\nIt will be moved to a .deck-manager-trash folder next to your decks, so you can still recover it.')) return;
       try { await api('/api/delete-deck', { path: d.path }); toast('Moved to trash'); load(); }
@@ -197,7 +212,30 @@ function card(d) {
 async function load() {
   try {
     const decks = await api('/api/decks');
-    grid.replaceChildren(...decks.map(card));
+    allGroups = [...new Set(decks.map((d) => d.group).filter(Boolean))].sort();
+    // Section per group folder; top-level (ungrouped) decks come first.
+    const byGroup = new Map();
+    for (const d of decks) {
+      const g = d.group || '';
+      if (!byGroup.has(g)) byGroup.set(g, []);
+      byGroup.get(g).push(d);
+    }
+    const keys = [...byGroup.keys()].sort((a, b) =>
+      a === '' ? -1 : b === '' ? 1 : a.localeCompare(b));
+    const frag = document.createDocumentFragment();
+    for (const g of keys) {
+      if (g) {
+        const h = document.createElement('h2');
+        h.className = 'ghead';
+        h.textContent = g;
+        frag.appendChild(h);
+      }
+      const wrap = document.createElement('div');
+      wrap.className = 'grid';
+      byGroup.get(g).forEach((d) => wrap.appendChild(card(d)));
+      frag.appendChild(wrap);
+    }
+    groupsEl.replaceChildren(frag);
     document.getElementById('empty').hidden = decks.length > 0;
   } catch (e) { toast(e.message, true); }
 }
