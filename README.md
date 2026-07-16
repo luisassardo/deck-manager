@@ -71,14 +71,23 @@ extracts them into an editable folder (the original file is untouched).
   one `<section>` per file.
 - **Double-click any text** on a slide to edit it in place. Blur or press
   Esc to finish.
+- **Click any element to select it** — outline + style bar (font size ±, text
+  color, alignment, duplicate, delete; bring-forward/backward for floating
+  objects). Drag to move: floating objects move freely; flow-layout elements
+  get a visual offset so the slide's responsive layout never breaks. Arrow
+  keys nudge (⇧ = bigger steps), `⌫` deletes, `⌘D` duplicates, Esc deselects.
+- **＋ Text** adds a floating text box; **＋ Image** adds a picture — or just
+  **drag & drop an image file onto the slide** (or paste one from the
+  clipboard). Images are copied into the deck's `assets/` folder; drag the
+  corner handle to resize.
 - **Notes** (toolbar or `N`): edit presenter notes for the current slide.
   Notes are stored as `data-speaker-notes` on the slide, so they travel
   with it when you reorder or duplicate.
 - Every change is **saved to the HTML file automatically** ("Saved ✓" pill,
-  bottom right). The last 20 versions of each deck are kept in
-  `deck-manager/.backups/`.
+  bottom right). The last 20 versions of each deck are kept in a
+  `.deck-manager-backups` folder next to your decks.
 
-For layout/design changes beyond text, edit the deck's HTML directly (or ask
+For bigger layout/design changes, edit the deck's HTML directly (or ask
 Claude Code) — the file is plain HTML, one `<section>` per slide.
 
 ## Presenting

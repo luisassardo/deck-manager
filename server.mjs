@@ -19,8 +19,12 @@
  *   POST /api/duplicate-deck    {path, name}
  *   POST /api/rename-deck       {path, name}
  *   POST /api/move-deck         {path, folder} → move a deck into ROOT/<folder>
+ *   POST /api/hide-deck         {path, hidden} → hide/show a deck in the library
+ *                               (metadata only — the file is never touched)
  *   POST /api/delete-deck       {path} → move a deck to ROOT/.deck-manager-trash
  *   POST /api/unbundle          {path} → extract a bundled single-file deck
+ *   POST /api/upload            {path, name, data} → save a base64 image into
+ *                               the deck's assets/ and return its relative src
  *   GET  /api/sync?deck=        Server-Sent Events stream of {index} for a deck
  *   POST /api/sync              {deck, index, id} → fan out to sync subscribers
  *   GET  /api/pdf?path=         render deck to PDF (headless Chrome) and download
@@ -103,6 +107,27 @@ async function readBody(req) {
   try { return raw ? JSON.parse(raw) : {}; } catch { throw new HttpError(400, 'Invalid JSON'); }
 }
 
+// ------------------------------------------------------------ hidden decks
+
+// Hidden decks are pure library metadata in ROOT/.deck-manager.json — hiding
+// never touches the deck's files, so the TRAINING folder stays exactly as the
+// user organized it.
+const META_FILE = () => path.join(ROOT, '.deck-manager.json');
+
+function readMeta() {
+  try { return JSON.parse(fs.readFileSync(META_FILE(), 'utf8')) || {}; } catch { return {}; }
+}
+function hiddenSet() { return new Set(readMeta().hidden || []); }
+async function setHidden(rel, hidden) {
+  safePath(rel); // validate only — nothing on disk is modified for the deck
+  const meta = readMeta();
+  const set = new Set(meta.hidden || []);
+  if (hidden) set.add(rel); else set.delete(rel);
+  meta.hidden = [...set].sort();
+  await fsp.writeFile(META_FILE(), JSON.stringify(meta, null, 2) + '\n');
+  return { hidden: !!hidden };
+}
+
 // ------------------------------------------------------------------ decks
 
 function isDeckHtml(txt) {
@@ -131,6 +156,7 @@ function isExternalDeck(txt) {
 
 async function findDecks() {
   const out = [];
+  const hid = hiddenSet();
   async function walk(dir, depth) {
     let entries;
     try { entries = await fsp.readdir(dir, { withFileTypes: true }); } catch { return; }
@@ -166,6 +192,7 @@ async function findDecks() {
           bundled,
           external,
           group: path.relative(ROOT, path.dirname(unit.target)) || '',
+          hidden: hid.has(rel),
           mtime: st.mtimeMs,
         });
       }
@@ -367,6 +394,29 @@ async function moveDeck(rel, folder) {
   return { path: path.relative(ROOT, newFile) };
 }
 
+/** Save an uploaded image (base64) into assets/ next to the deck file and
+ *  return its src relative to the deck, ready for an <img>. */
+const IMAGE_EXT_RE = /\.(png|jpe?g|gif|webp|svg|avif|heic)$/i;
+async function uploadAsset(rel, name, data) {
+  const file = safePath(rel);
+  if (!fs.existsSync(file)) throw new HttpError(404, 'Deck not found');
+  name = String(name || 'image.png').split('/').pop()
+    .replace(/[\\:*?"<>|#]/g, '-').replace(/\s+/g, ' ').trim() || 'image.png';
+  if (!IMAGE_EXT_RE.test(name)) name += '.png';
+  const buf = Buffer.from(String(data || ''), 'base64');
+  if (!buf.length) throw new HttpError(400, 'Empty image');
+  if (buf.length > 25 * 1024 * 1024) throw new HttpError(413, 'Image too large (25 MB max)');
+  const assetsDir = path.join(path.dirname(file), 'assets');
+  await fsp.mkdir(assetsDir, { recursive: true });
+  const base = name.replace(IMAGE_EXT_RE, '');
+  const ext = name.match(IMAGE_EXT_RE)[0];
+  let dest = path.join(assetsDir, name);
+  let n = 1;
+  while (fs.existsSync(dest)) dest = path.join(assetsDir, base + '-' + (n++) + ext);
+  await fsp.writeFile(dest, buf);
+  return { src: 'assets/' + path.basename(dest) };
+}
+
 async function slideTemplates() {
   const dir = path.join(DM_DIR, 'templates', 'slides');
   let files;
@@ -548,6 +598,8 @@ const server = http.createServer(async (req, res) => {
       if (p === '/api/duplicate-deck') return json(res, 200, await duplicateDeck(body.path, body.name));
       if (p === '/api/rename-deck') return json(res, 200, await renameDeck(body.path, body.name));
       if (p === '/api/move-deck') return json(res, 200, await moveDeck(body.path, body.folder));
+      if (p === '/api/hide-deck') return json(res, 200, await setHidden(body.path, !!body.hidden));
+      if (p === '/api/upload') return json(res, 200, await uploadAsset(body.path, body.name, body.data));
       if (p === '/api/delete-deck') return json(res, 200, await deleteDeck(body.path));
       if (p === '/api/unbundle') {
         const file = safePath(body.path);

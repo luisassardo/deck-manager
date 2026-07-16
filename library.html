@@ -34,7 +34,28 @@
     display: flex; align-items: center; gap: 10px; }
   .ghead::before { content: '▸'; color: rgba(79,142,247,.5); }
   #groups > .grid:first-child { margin-top: 0; }
-  #groups > .grid { margin-bottom: 8px; }
+  #groups > .grid { margin-bottom: 8px; min-height: 30px; border-radius: 12px; }
+  /* Drag & drop */
+  .card[draggable="true"] { cursor: grab; }
+  .card.dragging { opacity: .45; }
+  .ghead.drop-hint { color: #fff; border-bottom-color: var(--blue); background: rgba(79,142,247,.12); border-radius: 6px; }
+  .grid.drop-hint { outline: 2px dashed rgba(79,142,247,.6); outline-offset: 8px; }
+  #dropnew { display: none; position: fixed; left: 50%; transform: translateX(-50%); bottom: 22px;
+    z-index: 60; padding: 16px 26px; border-radius: 10px; font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; letter-spacing: .5px; color: rgba(255,255,255,.85);
+    background: rgba(10,14,26,.95); border: 1.5px dashed rgba(79,142,247,.6); }
+  body.dm-dragging #dropnew { display: block; }
+  #dropnew.drop-hint { border-color: var(--grn); color: #fff; background: rgba(16,185,129,.15); }
+  #groups > .grid:empty { display: none; }
+  body.dm-dragging #groups > .grid:empty { display: block; min-height: 56px;
+    outline: 1.5px dashed rgba(79,142,247,.35); outline-offset: -1px; }
+  body.dm-dragging #groups > .grid:empty::before { content: 'Top level — drop here';
+    display: block; padding: 18px; font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    letter-spacing: 1px; color: rgba(79,142,247,.6); }
+  /* Hidden section */
+  .ghead.hid-head { color: rgba(245,158,11,.85); border-bottom-color: rgba(245,158,11,.2); cursor: pointer; user-select: none; }
+  .ghead.hid-head::before { content: '⌀'; color: rgba(245,158,11,.5); }
+  .hid-grid .card { opacity: .75; }
   .card { background: rgba(79,142,247,.04); border: 1px solid rgba(79,142,247,.18);
     border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
   .card:hover { border-color: rgba(79,142,247,.45); }
@@ -75,6 +96,7 @@
 </header>
 <main>
   <div id="groups"></div>
+  <div id="dropnew">⤵ Drop here to move into a <b>new folder</b>…</div>
   <div class="empty" id="empty" hidden>No presentations found in this folder yet.</div>
 </main>
 <div class="toast" id="toast"></div>
@@ -175,14 +197,27 @@ function card(d) {
       try { await api('/api/move-deck', { path: d.path, folder: folder.trim() }); toast('Moved'); load(); }
       catch (e) { toast(e.message, true); }
     });
-    mk('Delete', 'danger', async () => {
-      if (!confirm('Delete “' + d.title + '”?\n\nIt will be moved to a .deck-manager-trash folder next to your decks, so you can still recover it.')) return;
-      try { await api('/api/delete-deck', { path: d.path }); toast('Moved to trash'); load(); }
+    // Hiding is library metadata only — the deck's files stay exactly where
+    // they are. Real deletion lives in the Hidden section.
+    mk('Hide', '', async () => {
+      try { await api('/api/hide-deck', { path: d.path, hidden: true }); toast('Hidden — find it in the Hidden section below'); load(); }
       catch (e) { toast(e.message, true); }
     });
   };
 
-  if (d.bundled) {
+  if (d.hidden) {
+    // Hidden-section card: restore, or truly remove (to the recoverable trash).
+    mk('Open', '', () => { location.href = deckUrl(d); });
+    mk('Unhide', 'go', async () => {
+      try { await api('/api/hide-deck', { path: d.path, hidden: false }); toast('Restored to the library'); load(); }
+      catch (e) { toast(e.message, true); }
+    });
+    mk('Delete', 'danger', async () => {
+      if (!confirm('Delete “' + d.title + '”?\n\nIt will be moved to the .deck-manager-trash folder next to your decks, so you can still recover it.')) return;
+      try { await api('/api/delete-deck', { path: d.path }); toast('Moved to trash'); load(); }
+      catch (e) { toast(e.message, true); }
+    });
+  } else if (d.bundled) {
     mk('View', '', () => { location.href = deckUrl(d); });
     mk('Import to edit', 'go', async () => {
       try {
@@ -206,16 +241,62 @@ function card(d) {
   }
 
   el.append(thumb, meta, actions);
+
+  // Drag a card onto another section (or the new-folder / Hidden targets).
+  if (!d.bundled && !d.hidden) {
+    el.draggable = true;
+    el.addEventListener('dragstart', (e) => {
+      dragDeck = d;
+      e.dataTransfer.setData('text/plain', d.path);
+      e.dataTransfer.effectAllowed = 'move';
+      el.classList.add('dragging');
+      document.body.classList.add('dm-dragging');
+    });
+    el.addEventListener('dragend', () => {
+      dragDeck = null;
+      el.classList.remove('dragging');
+      document.body.classList.remove('dm-dragging');
+      document.querySelectorAll('.drop-hint').forEach((n) => n.classList.remove('drop-hint'));
+    });
+  }
   return el;
+}
+
+let dragDeck = null;
+
+/** Make an element accept dragged deck cards; onDrop gets the dragged deck. */
+function dropTarget(elm, onDrop) {
+  elm.addEventListener('dragover', (e) => {
+    if (!dragDeck) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    elm.classList.add('drop-hint');
+  });
+  elm.addEventListener('dragleave', () => elm.classList.remove('drop-hint'));
+  elm.addEventListener('drop', (e) => {
+    e.preventDefault();
+    elm.classList.remove('drop-hint');
+    if (dragDeck) onDrop(dragDeck);
+  });
+}
+
+async function dropMove(d, folder) {
+  if ((d.group || '') === folder) return;
+  try { await api('/api/move-deck', { path: d.path, folder }); toast('Moved' + (folder ? ' to ' + folder : ' to top level')); load(); }
+  catch (e) { toast(e.message, true); }
 }
 
 async function load() {
   try {
     const decks = await api('/api/decks');
-    allGroups = [...new Set(decks.map((d) => d.group).filter(Boolean))].sort();
-    // Section per group folder; top-level (ungrouped) decks come first.
-    const byGroup = new Map();
-    for (const d of decks) {
+    const visible = decks.filter((d) => !d.hidden);
+    const hiddenDecks = decks.filter((d) => d.hidden);
+    allGroups = [...new Set(visible.map((d) => d.group).filter(Boolean))].sort();
+    // Section per group folder; top-level (ungrouped) decks come first. The
+    // top-level section always exists so it's available as a drop target
+    // (shown as a labeled strip while dragging).
+    const byGroup = new Map([['', []]]);
+    for (const d of visible) {
       const g = d.group || '';
       if (!byGroup.has(g)) byGroup.set(g, []);
       byGroup.get(g).push(d);
@@ -224,21 +305,53 @@ async function load() {
       a === '' ? -1 : b === '' ? 1 : a.localeCompare(b));
     const frag = document.createDocumentFragment();
     for (const g of keys) {
+      const wrap = document.createElement('div');
+      wrap.className = 'grid';
+      byGroup.get(g).forEach((d) => wrap.appendChild(card(d)));
       if (g) {
         const h = document.createElement('h2');
         h.className = 'ghead';
         h.textContent = g;
+        dropTarget(h, (d) => dropMove(d, g));
         frag.appendChild(h);
       }
-      const wrap = document.createElement('div');
-      wrap.className = 'grid';
-      byGroup.get(g).forEach((d) => wrap.appendChild(card(d)));
+      dropTarget(wrap, (d) => dropMove(d, g));
       frag.appendChild(wrap);
+    }
+
+    // Hidden section — collapsed by default, remembered per browser. Cards
+    // here offer Unhide / Delete; dropping a card on the header hides it.
+    if (hiddenDecks.length) {
+      const open = localStorage.getItem('dm.hiddenOpen') === '1';
+      const h = document.createElement('h2');
+      h.className = 'ghead hid-head';
+      h.textContent = 'Hidden (' + hiddenDecks.length + ') ' + (open ? '▾' : '▸');
+      h.title = 'Decks hidden from the library — files untouched. Click to expand; drop a card here to hide it.';
+      const wrap = document.createElement('div');
+      wrap.className = 'grid hid-grid';
+      wrap.hidden = !open;
+      hiddenDecks.forEach((d) => wrap.appendChild(card(d)));
+      h.addEventListener('click', () => {
+        wrap.hidden = !wrap.hidden;
+        localStorage.setItem('dm.hiddenOpen', wrap.hidden ? '0' : '1');
+        h.textContent = 'Hidden (' + hiddenDecks.length + ') ' + (wrap.hidden ? '▸' : '▾');
+      });
+      dropTarget(h, async (d) => {
+        try { await api('/api/hide-deck', { path: d.path, hidden: true }); toast('Hidden'); load(); }
+        catch (e) { toast(e.message, true); }
+      });
+      frag.append(h, wrap);
     }
     groupsEl.replaceChildren(frag);
     document.getElementById('empty').hidden = decks.length > 0;
   } catch (e) { toast(e.message, true); }
 }
+
+// Drop a card on the floating zone to file it into a brand-new folder.
+dropTarget(document.getElementById('dropnew'), (d) => {
+  const folder = prompt('Name for the new folder:');
+  if (folder && folder.trim()) dropMove(d, folder.trim());
+});
 
 document.getElementById('new-deck').addEventListener('click', async () => {
   const name = prompt('Name for the new presentation:');
