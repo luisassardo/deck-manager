@@ -68,6 +68,16 @@ final class Server: ObservableObject {
     private func findNode() -> String? {
         let candidates = ["/opt/homebrew/bin/node", "/usr/local/bin/node", "/usr/bin/node"]
         for c in candidates where FileManager.default.isExecutableFile(atPath: c) { return c }
+        // Homebrew keg-only installs (e.g. a brew upgrade that switches `node`
+        // to `node@24`) aren't symlinked into bin/ — probe opt/node*/bin too.
+        for optDir in ["/opt/homebrew/opt", "/usr/local/opt"] {
+            if let entries = try? FileManager.default.contentsOfDirectory(atPath: optDir) {
+                for e in entries.filter({ $0 == "node" || $0.hasPrefix("node@") }).sorted(by: >) {
+                    let p = optDir + "/" + e + "/bin/node"
+                    if FileManager.default.isExecutableFile(atPath: p) { return p }
+                }
+            }
+        }
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/bin/zsh")
         p.arguments = ["-lc", "command -v node"]
