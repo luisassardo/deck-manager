@@ -527,10 +527,15 @@ async function exportPdf(res, rel) {
   const buf = await fsp.readFile(tmp);
   fsp.unlink(tmp).catch(() => {});
   const safeTitle = title.trim().replace(/[/\\:*?"<>|]/g, '-') || 'deck';
+  // HTTP headers only allow Latin-1: deck titles with em dashes/accents made
+  // writeHead throw ("Invalid character in header content"). Send an ASCII
+  // fallback plus the RFC 5987 filename* form so browsers keep the full name.
+  const ascii = safeTitle.replace(/[^\x20-\x7E]/g, '-');
   res.writeHead(200, {
     'Content-Type': 'application/pdf',
     'Content-Length': buf.length,
-    'Content-Disposition': 'attachment; filename="' + safeTitle + '.pdf"',
+    'Content-Disposition': 'attachment; filename="' + ascii + '.pdf"; ' +
+      "filename*=UTF-8''" + encodeURIComponent(safeTitle + '.pdf'),
   });
   res.end(buf);
 }
