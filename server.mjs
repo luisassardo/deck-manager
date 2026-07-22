@@ -490,7 +490,7 @@ async function exportPdf(res, rel) {
 
   const title = (txt.match(/<title>([^<]*)<\/title>/i) || [])[1] || path.basename(file, '.html');
   const url = 'http://127.0.0.1:' + PORT + '/files/' +
-    rel.split(path.sep).map(encodeURIComponent).join('/') + '?raw=1';
+    rel.split(path.sep).map(encodeURIComponent).join('/') + '?raw=1&print=1';
   const tmp = path.join(os.tmpdir(), 'deck-' + Date.now() + '-' + Math.random().toString(36).slice(2) + '.pdf');
   const profile = path.join(os.tmpdir(), 'deck-pdf-profile');
 
@@ -550,18 +550,32 @@ function injectScripts(txt, srcs) {
   return at >= 0 ? txt.slice(0, at) + tags + txt.slice(at) : txt + tags;
 }
 
-async function serveFile(res, file, { inject = false } = {}) {
+// Some decks pin the component to the viewport (deck-stage{position:fixed;
+// inset:0}). Document CSS on the host outranks the component's :host print
+// rules, so every slide collapses onto one printed page. Injected only for
+// PDF rendering (?print=1) and stronger than any author rule.
+const PRINT_FIX = '<style>@media print{deck-stage{position:static!important;' +
+  'inset:auto!important;width:auto!important;height:auto!important;' +
+  'transform:none!important;overflow:visible!important}}</style>';
+
+async function serveFile(res, file, { inject = false, printFix = false } = {}) {
   let st;
   try { st = await fsp.stat(file); } catch { return json(res, 404, { error: 'Not found' }); }
   if (st.isDirectory()) return json(res, 404, { error: 'Not found' });
   const ext = path.extname(file).toLowerCase();
   const mime = MIME[ext] || 'application/octet-stream';
-  if (ext === '.html' && inject) {
+  if (ext === '.html' && (inject || printFix)) {
     let txt = await fsp.readFile(file, 'utf8');
-    if (isDeckHtml(txt) && !isBundle(txt)) {
-      txt = injectScripts(txt, ['/__dm/edit-mode.js', '/__dm/presenter.js']);
-    } else if (isExternalDeck(txt)) {
-      txt = injectScripts(txt, ['/__dm/external-mode.js']);
+    if (inject) {
+      if (isDeckHtml(txt) && !isBundle(txt)) {
+        txt = injectScripts(txt, ['/__dm/edit-mode.js', '/__dm/presenter.js']);
+      } else if (isExternalDeck(txt)) {
+        txt = injectScripts(txt, ['/__dm/external-mode.js']);
+      }
+    }
+    if (printFix && isDeckHtml(txt) && !isBundle(txt)) {
+      const at = txt.lastIndexOf('</body>');
+      txt = at >= 0 ? txt.slice(0, at) + PRINT_FIX + txt.slice(at) : txt + PRINT_FIX;
     }
     res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'no-store' });
     return res.end(txt);
@@ -584,7 +598,7 @@ const server = http.createServer(async (req, res) => {
       }
       if (p.startsWith('/files/')) {
         return await serveFile(res, safePath(p.slice('/files/'.length)),
-          { inject: !u.searchParams.has('raw') });
+          { inject: !u.searchParams.has('raw'), printFix: u.searchParams.has('print') });
       }
       if (p === '/api/decks') return json(res, 200, await findDecks());
       if (p === '/api/slide-templates') return json(res, 200, await slideTemplates());
