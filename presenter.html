@@ -19,6 +19,10 @@
     border-radius: 5px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.05); color: rgba(255,255,255,.75); cursor: pointer; }
   .tbtn:hover { border-color: var(--blue); color: #fff; }
   .tbtn.primary { border-color: rgba(16,185,129,.5); color: var(--grn); }
+  .anngroup { display: flex; gap: 6px; padding-right: 4px; margin-right: 2px;
+    border-right: 1px solid rgba(255,255,255,.12); }
+  .tbtn.ann { min-width: 34px; padding: 7px 10px; }
+  .tbtn.ann.on { background: #4F8EF7; border-color: #4F8EF7; color: #06101f; }
   main { flex: 1; display: grid; grid-template-columns: 1fr 380px; gap: 16px; padding: 16px 20px; min-height: 0; }
   .cur { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
   .frame { position: relative; background: #000; border: 1px solid rgba(79,142,247,.25); border-radius: 8px; overflow: hidden; flex: 1; min-height: 0; }
@@ -47,6 +51,12 @@
     <button class="tbtn" id="timer-toggle">START</button>
     <button class="tbtn" id="timer-reset">RESET</button>
   </div>
+  <span class="anngroup">
+    <button class="tbtn ann" id="ann-laser">◉</button>
+    <button class="tbtn ann" id="ann-pen">✎</button>
+    <button class="tbtn ann" id="ann-black" title="Black the shared screen (B)">■</button>
+    <button class="tbtn ann" id="ann-clear" title="Erase the ink on this slide (E)">Erase</button>
+  </span>
   <button class="tbtn primary" id="audience">▶ PLAY SLIDESHOW ⧉</button>
 </header>
 <main>
@@ -70,7 +80,7 @@
   <button class="navbtn" id="next-btn">→</button>
   <span class="count"><span id="cur-n">1</span> / <span id="total-n">?</span></span>
   <div class="spacer"></div>
-  <span class="hint">← → SPACE navigate · HOME/END jump · timer starts on first advance</span>
+  <span class="hint">← → SPACE navigate · L laser · P pen · B black · E erase</span>
 </footer>
 
 <script>
@@ -115,19 +125,87 @@
   const nxt = document.getElementById('next');
   cur.src = deckPathname + '?_snthumb=1&_dmfollow=cur#1';
   nxt.src = deckPathname + '?_snthumb=1&_dmfollow=next#2';
+  let curFit = { left: 0, top: 0, s: 1 };
   function fit(frame, holder) {
     const w = holder.clientWidth, h = holder.clientHeight;
     const s = Math.min(w / 1920, h / 1080);
     // transform-origin is 0 0, so scale from the top-left and center by
     // offsetting with the *scaled* dimensions (a percentage translate would
     // shift by the unscaled 1920×1080 and push the slide out of the frame).
-    frame.style.left = ((w - 1920 * s) / 2) + 'px';
-    frame.style.top = ((h - 1080 * s) / 2) + 'px';
+    const left = (w - 1920 * s) / 2, top = (h - 1080 * s) / 2;
+    frame.style.left = left + 'px';
+    frame.style.top = top + 'px';
     frame.style.transform = 'scale(' + s + ')';
+    if (frame === cur) curFit = { left, top, s };
   }
   const cf = document.getElementById('cur-frame'), nf = document.getElementById('next-frame');
   new ResizeObserver(() => fit(cur, cf)).observe(cf);
   new ResizeObserver(() => fit(nxt, nf)).observe(nf);
+
+  // --- annotation: drive the shared slideshow window from here --------------
+  // Ephemeral events go out on /api/cue; the slideshow window renders them.
+  let annTool = 'off';
+  const cue = (ev) => fetch('/api/cue', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deck: deckPath, ev, id: clientId }), keepalive: true,
+  }).catch(() => {});
+
+  const annBtns = {};
+  function setAnn(t) {
+    annTool = annTool === t ? 'off' : t;
+    for (const [k, b] of Object.entries(annBtns)) b.classList.toggle('on', k === annTool);
+    cf.style.cursor = annTool === 'off' ? '' : 'crosshair';
+    cue({ t: 'tool', tool: annTool });
+  }
+  for (const [key, label, title] of [
+    ['laser', '◉', 'Laser pointer — move over the slide below (L)'],
+    ['pen', '✎', 'Draw — drag over the slide below (P)'],
+  ]) {
+    const b = document.getElementById('ann-' + key);
+    annBtns[key] = b;
+    b.title = title;
+    b.addEventListener('click', () => setAnn(key));
+  }
+  document.getElementById('ann-black').addEventListener('click', function () {
+    this.classList.toggle('on');
+    cue({ t: 'blackout', mode: this.classList.contains('on') ? 'black' : null });
+  });
+  document.getElementById('ann-clear').addEventListener('click', () => cue({ t: 'clear' }));
+
+  // Map a pointer over the current-slide preview to normalized slide coords.
+  function normFromEvent(e) {
+    const r = cf.getBoundingClientRect();
+    const x = (e.clientX - r.left - curFit.left) / (1920 * curFit.s);
+    const y = (e.clientY - r.top - curFit.top) / (1080 * curFit.s);
+    return (x >= 0 && x <= 1 && y >= 0 && y <= 1) ? { x, y } : null;
+  }
+  let penDown = false, sendAt = 0;
+  cf.addEventListener('pointermove', (e) => {
+    if (annTool === 'off') return;
+    const n = normFromEvent(e);
+    if (!n) return;
+    const now = performance.now();
+    if (now - sendAt < 40) return;                 // ~25 updates/s is plenty
+    sendAt = now;
+    if (annTool === 'pen' && !penDown) return;     // pen only paints while held
+    cue({ t: 'ptr', x: n.x, y: n.y, tool: annTool });
+  });
+  cf.addEventListener('pointerdown', (e) => {
+    if (annTool !== 'pen') return;
+    const n = normFromEvent(e);
+    if (!n) return;
+    penDown = true;
+    cf.setPointerCapture(e.pointerId);
+    cue({ t: 'ptr', x: n.x, y: n.y, tool: 'pen', start: true });
+  });
+  const penUp = (e) => {
+    if (!penDown) return;
+    penDown = false;
+    const n = normFromEvent(e) || { x: 0, y: 0 };
+    cue({ t: 'ptr', x: n.x, y: n.y, tool: 'pen', end: true });
+  };
+  cf.addEventListener('pointerup', penUp);
+  cf.addEventListener('pointercancel', penUp);
 
   // --- shared index
   let index = 0;
@@ -151,6 +229,7 @@
   es.onmessage = (ev) => {
     let m; try { m = JSON.parse(ev.data); } catch { return; }
     if (m.id === clientId) return;
+    if (typeof m.index !== 'number' || !Number.isFinite(m.index)) return;   // annotation event
     if (m.index !== index) { index = Math.max(0, Math.min(m.index, (total || 1) - 1)); render(); startTimerOnce(); }
   };
   // Re-publish once previews finish loading so late iframes catch up.

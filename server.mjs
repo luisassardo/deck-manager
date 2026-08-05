@@ -27,6 +27,7 @@
  *                               the deck's assets/ and return its relative src
  *   GET  /api/sync?deck=        Server-Sent Events stream of {index} for a deck
  *   POST /api/sync              {deck, index, id} → fan out to sync subscribers
+ *   POST /api/cue               {deck, ev, id} → ephemeral fan-out (annotation)
  *   GET  /api/pdf?path=         render deck to PDF (headless Chrome) and download
  *
  * Every write keeps a timestamped backup in ROOT/.cue-backups/<deck>/
@@ -470,6 +471,16 @@ function syncSubscribe(res, deck) {
   res.on('close', () => { clearInterval(beat); set.delete(res); });
 }
 
+/** Ephemeral fan-out: presenter → slideshow annotation events (laser pointer,
+ *  ink, blackout). Deliberately NOT stored — a window joining later should get
+ *  the current slide, not a replay of someone's pointer movements. */
+function cuePublish(deck, ev, id) {
+  const set = syncClients.get(deck);
+  if (!set) return;
+  const line = 'data: ' + JSON.stringify({ ev, id }) + '\n\n';
+  for (const res of set) { try { res.write(line); } catch {} }
+}
+
 function syncPublish(deck, index, id) {
   const payload = { index, id };
   syncState.set(deck, payload);
@@ -584,7 +595,7 @@ async function serveFile(res, file, { inject = false, printFix = false } = {}) {
     let txt = await fsp.readFile(file, 'utf8');
     if (inject) {
       if (isDeckHtml(txt) && !isBundle(txt)) {
-        txt = injectScripts(txt, ['/__dm/edit-mode.js', '/__dm/presenter.js']);
+        txt = injectScripts(txt, ['/__dm/edit-mode.js', '/__dm/presenter.js', '/__dm/annotate.js']);
       } else if (isExternalDeck(txt)) {
         txt = injectScripts(txt, ['/__dm/external-mode.js']);
       }
@@ -628,6 +639,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST') {
       const body = await readBody(req);
       if (p === '/api/sync') { syncPublish(body.deck || '', body.index | 0, body.id || ''); return json(res, 200, { ok: true }); }
+      if (p === '/api/cue') { cuePublish(body.deck || '', body.ev || {}, body.id || ''); return json(res, 200, { ok: true }); }
       if (p === '/api/save') return json(res, 200, await saveDeck(body.path, body.stage, body.notes));
       if (p === '/api/new-deck') return json(res, 200, await newDeck(body.name));
       if (p === '/api/duplicate-deck') return json(res, 200, await duplicateDeck(body.path, body.name));

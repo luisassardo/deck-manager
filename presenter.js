@@ -44,6 +44,9 @@
     es.onmessage = (ev) => {
       let m; try { m = JSON.parse(ev.data); } catch { return; }
       if (m.id === clientId) return;               // ignore our own echo
+      // The stream also carries ephemeral annotation events (handled by
+      // annotate.js) — only slide-position messages belong here.
+      if (typeof m.index !== 'number' || !Number.isFinite(m.index)) return;
       const want = follow === 'next' ? m.index + 1 : m.index;
       const target = Math.max(0, Math.min(want, stage.length - 1));
       if (target === stage.index) return;
