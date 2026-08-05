@@ -197,6 +197,20 @@ function card(d) {
       try { await api('/api/move-deck', { path: d.path, folder: folder.trim() }); toast('Moved'); load(); }
       catch (e) { toast(e.message, true); }
     });
+    // Copy the deck, then open the side-by-side translation editor. Structure
+    // is never touched — only text — so both language versions stay in step.
+    mk('Translate…', '', async () => {
+      const lang = prompt('Language or suffix for the translation:\n(the copy is named "' +
+        d.title + ' (…)")', 'ES');
+      if (!lang || !lang.trim()) return;
+      const name = d.title + ' (' + lang.trim() + ')';
+      try {
+        const r = await api('/api/duplicate-deck', { path: d.path, name });
+        toast('Created ' + name);
+        location.href = '/__dm/translate.html?src=' + encodeURIComponent(d.path) +
+          '&dst=' + encodeURIComponent(r.path);
+      } catch (e) { toast(e.message, true); }
+    });
     // Hiding is library metadata only — the deck's files stay exactly where
     // they are. Real deletion lives in the Hidden section.
     mk('Hide', '', async () => {

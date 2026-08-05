@@ -104,6 +104,10 @@ extracts them into an editable folder (the original file is untouched).
   **drag & drop an image file onto the slide** (or paste one from the
   clipboard). Images are copied into the deck's `assets/` folder; drag the
   corner handle to resize.
+- **Translate…** (library card) copies the deck and opens a side-by-side
+  editor: original on the left, editable translation on the right, including
+  slide names and speaker notes. Only text is touched, so both language
+  versions keep identical structure and design. Progress is shown as you go.
 - **Notes** (toolbar or `N`): edit presenter notes for the current slide.
   Notes are stored as `data-speaker-notes` on the slide, so they travel
   with it when you reorder or duplicate.

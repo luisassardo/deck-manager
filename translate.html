@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CUE — Translate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;600&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0A0E1A; --blue:#4F8EF7; --grn:#10B981; --amb:#F59E0B; --red:#F43F5E; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: #fff; font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+  header { position: sticky; top: 0; z-index: 10; background: rgba(10,14,26,.96);
+    border-bottom: 1px solid rgba(79,142,247,.18); padding: 16px 32px;
+    display: flex; align-items: center; gap: 20px; }
+  h1 { font-family: 'Syne', sans-serif; font-size: 19px; font-weight: 700; }
+  .pair { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: rgba(255,255,255,.5); margin-top: 4px; }
+  .pair b { color: var(--blue); font-weight: 600; }
+  .spacer { flex: 1; }
+  .prog { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: rgba(255,255,255,.6); text-align: right; }
+  .bar { width: 190px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.12); margin-top: 6px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--grn); width: 0; transition: width .25s; }
+  .btn { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .5px;
+    padding: 9px 16px; border-radius: 6px; border: 1px solid rgba(79,142,247,.4);
+    background: rgba(79,142,247,.12); color: #fff; cursor: pointer; }
+  .btn:hover { background: rgba(79,142,247,.25); }
+  main { padding: 26px 32px 80px; max-width: 1500px; }
+  .slide { margin-bottom: 34px; }
+  .shead { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 2.5px;
+    text-transform: uppercase; color: rgba(79,142,247,.85); padding-bottom: 8px;
+    border-bottom: 1px solid rgba(79,142,247,.16); margin-bottom: 4px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 12px 2px;
+    border-bottom: 1px solid rgba(255,255,255,.05); align-items: start; }
+  .row:hover { background: rgba(79,142,247,.03); }
+  .src { font-size: 16px; line-height: 1.5; color: rgba(255,255,255,.6); white-space: pre-wrap;
+    padding: 9px 11px; border-left: 2px solid rgba(255,255,255,.12); }
+  .tgt { position: relative; }
+  .tgt textarea { width: 100%; min-height: 42px; resize: vertical; background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.14); border-radius: 6px; color: #fff; padding: 9px 11px;
+    font: 16px/1.5 'DM Sans', system-ui, sans-serif; }
+  .tgt textarea:focus { outline: none; border-color: var(--blue); background: rgba(79,142,247,.08); }
+  .row[data-same] .tgt textarea { border-color: rgba(245,158,11,.35); }
+  .row[data-done] .tgt textarea { border-color: rgba(16,185,129,.4); }
+  .kind { position: absolute; top: -9px; right: 8px; font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; padding: 1px 7px;
+    border-radius: 3px; background: #101a2e; border: 1px solid rgba(79,142,247,.35); color: rgba(79,142,247,.9); }
+  .tools { display: flex; gap: 8px; margin-top: 5px; }
+  .mini { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; padding: 3px 8px;
+    border-radius: 4px; border: 1px solid rgba(255,255,255,.14); background: none;
+    color: rgba(255,255,255,.5); cursor: pointer; }
+  .mini:hover { color: #fff; border-color: var(--blue); }
+  .pill { position: fixed; bottom: 18px; right: 22px; font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; padding: 9px 15px; border-radius: 6px; background: rgba(10,14,26,.95);
+    border: 1px solid rgba(79,142,247,.4); color: #9cc0ff; opacity: 0; transition: opacity .2s; }
+  .pill[data-on] { opacity: 1; }
+  .pill[data-kind="ok"] { color: #6ee7b7; border-color: rgba(16,185,129,.5); }
+  .pill[data-kind="err"] { color: #ffb3c0; border-color: rgba(244,63,94,.6); }
+  .note { color: rgba(255,255,255,.45); font-size: 15px; padding: 40px 0; }
+  .warn { background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.35);
+    border-radius: 8px; padding: 14px 18px; margin-bottom: 22px; font-size: 15px; color: #ffd699; }
+  iframe.hidden { position: absolute; width: 1920px; height: 1080px; left: -99999px; top: 0; border: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Translate</h1>
+    <div class="pair" id="pair">…</div>
+  </div>
+  <div class="spacer"></div>
+  <div>
+    <div class="prog" id="prog">—</div>
+    <div class="bar"><i id="barfill"></i></div>
+  </div>
+  <button class="btn" id="open-target">Open translated deck ⧉</button>
+</header>
+<main><div class="note" id="status">Loading both decks…</div><div id="rows"></div></main>
+<div class="pill" id="pill"></div>
+
+<script>
+(async () => {
+  const q = new URLSearchParams(location.search);
+  const SRC = q.get('src'), DST = q.get('dst');
+  const pill = document.getElementById('pill');
+  let pillT;
+  const say = (kind, msg) => {
+    pill.dataset.kind = kind; pill.textContent = msg; pill.setAttribute('data-on', '');
+    clearTimeout(pillT);
+    if (kind !== 'saving') pillT = setTimeout(() => pill.removeAttribute('data-on'), 1800);
+  };
+  if (!SRC || !DST) { document.getElementById('status').textContent = 'Missing ?src= and ?dst='; return; }
+
+  const url = (p) => '/files/' + p.split('/').map(encodeURIComponent).join('/') + '?raw=1';
+  document.getElementById('pair').innerHTML =
+    SRC.split('/').pop().replace(/\.html$/, '') + ' &nbsp;→&nbsp; <b>' +
+    DST.split('/').pop().replace(/\.html$/, '') + '</b>';
+  document.getElementById('open-target').addEventListener('click',
+    () => window.open('/files/' + DST.split('/').map(encodeURIComponent).join('/'), '_blank'));
+
+  // Load both decks as documents. The target is loaded into a live iframe so
+  // edits mutate a real DOM we can serialize back; the source is only read.
+  async function docOf(p) {
+    const html = await (await fetch(url(p))).text();
+    return new DOMParser().parseFromString(html, 'text/html');
+  }
+  const srcDoc = await docOf(SRC);
+  const dstFrame = document.createElement('iframe');
+  dstFrame.className = 'hidden';
+  document.body.appendChild(dstFrame);
+  await new Promise((res) => {
+    dstFrame.addEventListener('load', res, { once: true });
+    dstFrame.src = url(DST);
+  });
+  const dstDoc = dstFrame.contentDocument;
+
+  const sections = (d) => [...d.querySelectorAll('deck-stage > section')];
+  const srcSecs = sections(srcDoc), dstSecs = sections(dstDoc);
+
+  /** Elements that directly hold visible text — the same rule the slide editor
+   *  uses, so what you can translate here is what you can edit there. */
+  function textEls(section) {
+    const out = [];
+    for (const el of section.querySelectorAll('*')) {
+      if (/^(SCRIPT|STYLE|BR|IMG|SVG|PATH|CIRCLE|RECT|LINE|G)$/.test(el.tagName)) continue;
+      const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+      if (own) out.push(el);
+    }
+    return out;
+  }
+
+  const rowsEl = document.getElementById('rows');
+  const status = document.getElementById('status');
+  const pairs = [];
+
+  if (srcSecs.length !== dstSecs.length) {
+    const w = document.createElement('div');
+    w.className = 'warn';
+    w.textContent = 'The decks have different slide counts (' + srcSecs.length + ' vs ' +
+      dstSecs.length + '). Only the slides they share are shown — re-create the ' +
+      'translation from the original if they have drifted apart.';
+    rowsEl.appendChild(w);
+  }
+
+  const n = Math.min(srcSecs.length, dstSecs.length);
+  for (let i = 0; i < n; i++) {
+    const sSec = srcSecs[i], dSec = dstSecs[i];
+    const block = document.createElement('div');
+    block.className = 'slide';
+    const head = document.createElement('div');
+    head.className = 'shead';
+    head.textContent = String(i + 1).padStart(2, '0') + ' · ' +
+      (sSec.getAttribute('data-label') || 'Slide ' + (i + 1));
+    block.appendChild(head);
+
+    const items = [];
+    // Slide name and speaker notes are translatable too.
+    if (sSec.getAttribute('data-label')) items.push({ kind: 'label', attr: 'data-label' });
+    if (sSec.getAttribute('data-speaker-notes')) items.push({ kind: 'notes', attr: 'data-speaker-notes' });
+    for (const it of items) {
+      addRow(block, it.kind,
+        () => sSec.getAttribute(it.attr) || '',
+        () => dSec.getAttribute(it.attr) || '',
+        (v) => dSec.setAttribute(it.attr, v));
+    }
+
+    const sEls = textEls(sSec), dEls = textEls(dSec);
+    const m = Math.min(sEls.length, dEls.length);
+    for (let j = 0; j < m; j++) {
+      const se = sEls[j], de = dEls[j];
+      addRow(block, 'text', () => ownText(se), () => ownText(de),
+        (v) => setText(de, v));
+    }
+    if (sEls.length || items.length) rowsEl.appendChild(block);
+  }
+
+  /** An element's own text nodes. A heading written as "Protecting<br>Accounts"
+   *  has two of them, so each becomes one line here and the <br> survives.
+   *  Declarations (not const arrows) — these are called from the loop above. */
+  function ownTextNodes(el) {
+    return [...el.childNodes].filter((nd) => nd.nodeType === 3 && nd.textContent.trim());
+  }
+  function ownText(el) {
+    return ownTextNodes(el).map((nd) => nd.textContent.trim()).join('\n');
+  }
+
+  /** Write the edited lines back into the same text nodes, leaving every child
+   *  element (<br>, <b>, icons…) exactly where it was. */
+  function setText(el, value) {
+    const nodes = ownTextNodes(el);
+    if (!nodes.length) { el.insertBefore(document.createTextNode(value), el.firstChild); return; }
+    const lines = value.split('\n');
+    nodes.forEach((nd, i) => {
+      // Any surplus lines ride along on the last node so nothing is lost.
+      nd.textContent = i === nodes.length - 1 ? lines.slice(i).join(' ') : (lines[i] ?? '');
+    });
+  }
+
+  function addRow(block, kind, getSrc, getDst, setDst) {
+    const srcText = getSrc();
+    if (!srcText) return;
+    const row = document.createElement('div');
+    row.className = 'row';
+
+    const s = document.createElement('div');
+    s.className = 'src';
+    s.textContent = srcText;
+
+    const t = document.createElement('div');
+    t.className = 'tgt';
+    if (kind !== 'text') {
+      const k = document.createElement('span');
+      k.className = 'kind';
+      k.textContent = kind === 'label' ? 'slide name' : 'speaker notes';
+      t.appendChild(k);
+    }
+    const ta = document.createElement('textarea');
+    ta.value = getDst();
+    ta.rows = Math.min(8, Math.max(1, Math.ceil(srcText.length / 60)));
+    t.appendChild(ta);
+
+    const tools = document.createElement('div');
+    tools.className = 'tools';
+    const copy = document.createElement('button');
+    copy.className = 'mini';
+    copy.textContent = 'Use original';
+    copy.addEventListener('click', () => { ta.value = srcText; commit(); });
+    tools.appendChild(copy);
+    t.appendChild(tools);
+
+    const rec = { row, ta, srcText };
+    pairs.push(rec);
+    const commit = () => { setDst(ta.value); mark(rec); save(); };
+    ta.addEventListener('input', () => { mark(rec); queueSave(); });
+    ta.addEventListener('change', commit);
+    ta.addEventListener('blur', commit);
+
+    row.append(s, t);
+    block.appendChild(row);
+    mark(rec);
+  }
+
+  function mark(rec) {
+    const v = rec.ta.value.trim();
+    const untouched = !v || v === rec.srcText.trim();
+    rec.row.toggleAttribute('data-same', untouched);
+    rec.row.toggleAttribute('data-done', !untouched);
+    progress();
+  }
+  function progress() {
+    const done = pairs.filter((p) => p.row.hasAttribute('data-done')).length;
+    document.getElementById('prog').textContent = done + ' / ' + pairs.length + ' translated';
+    document.getElementById('barfill').style.width = (pairs.length ? done / pairs.length * 100 : 0) + '%';
+  }
+
+  // ---- save: serialize the target deck's slides back to its .html ----------
+  const RUNTIME_ATTRS = /^data-(deck-(?!skip)|screen-label$|om-validate$)/;
+  function serialize() {
+    return dstSecs.map((s) => {
+      const c = s.cloneNode(true);
+      for (let i = c.attributes.length - 1; i >= 0; i--) {
+        if (RUNTIME_ATTRS.test(c.attributes[i].name)) c.removeAttribute(c.attributes[i].name);
+      }
+      return c.outerHTML;
+    }).join('\n\n');
+  }
+  let saveT;
+  const queueSave = () => { clearTimeout(saveT); saveT = setTimeout(save, 1200); };
+  async function save() {
+    clearTimeout(saveT);
+    say('saving', 'Saving…');
+    try {
+      const r = await fetch('/api/save', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: DST, stage: serialize() }),
+      });
+      if (!r.ok) throw new Error((await r.json()).error || r.statusText);
+      say('ok', 'Saved ✓');
+    } catch (e) { say('err', 'Save failed — ' + e.message); }
+  }
+
+  status.remove();
+  progress();
+  if (!pairs.length) rowsEl.innerHTML = '<div class="note">No translatable text found in this deck.</div>';
+})();
+</script>
+</body>
+</html>
