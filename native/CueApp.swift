@@ -1,6 +1,6 @@
-// DeckManagerApp — native macOS shell for Deck Manager.
+// CueApp — native macOS shell for CUE, The HTML Presentation Studio.
 //
-// Starts the Node server (deck-manager/server.mjs) in the chosen workshop
+// Starts the Node server (the tool folder’s server.mjs) in the chosen workshop
 // folder, shows the library in a WKWebView, and — crucially — makes the
 // embedded web UI behave like a browser: window.open() opens a real native
 // window (individually shareable in Zoom/Meet) and PDF links download to
@@ -50,22 +50,26 @@ final class Server: ObservableObject {
     }
 
     /// The tool's server.mjs — lives next to the app bundle inside the tool
-    /// folder (…/deck-manager/native/DeckManager.app → …/deck-manager/server.mjs),
+    /// folder (…/CUE/native/CUE.app → …/CUE/server.mjs),
     /// independent of where the decks are.
     static var serverScript: String {
         let bundled = URL(fileURLWithPath: Bundle.main.bundlePath)
             .deletingLastPathComponent()   // native/
-            .deletingLastPathComponent()   // deck-manager/ (tool root)
+            .deletingLastPathComponent()   // tool root
             .appendingPathComponent("server.mjs").path
         if FileManager.default.fileExists(atPath: bundled) { return bundled }
         // Dev fallback: running unbundled from the tool folder.
         let cwd = FileManager.default.currentDirectoryPath
-        for c in ["\(cwd)/server.mjs", "\(cwd)/deck-manager/server.mjs"] where
+        for c in ["\(cwd)/server.mjs", "\(cwd)/the tool folder’s server.mjs"] where
             FileManager.default.fileExists(atPath: c) { return c }
         return bundled
     }
 
     private func findNode() -> String? {
+        // A runtime shipped inside the bundle (release builds) always wins, so
+        // installed copies of CUE never depend on the user having Node.
+        if let res = Bundle.main.resourceURL?.appendingPathComponent("node").path,
+           FileManager.default.isExecutableFile(atPath: res) { return res }
         let candidates = ["/opt/homebrew/bin/node", "/usr/local/bin/node", "/usr/bin/node"]
         for c in candidates where FileManager.default.isExecutableFile(atPath: c) { return c }
         // Homebrew keg-only installs (e.g. a brew upgrade that switches `node`
@@ -302,12 +306,12 @@ enum WebFactory {
 // MARK: - App
 
 @main
-struct DeckManagerApp: App {
+struct CueApp: App {
     @StateObject private var server = Server.shared
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
 
     var body: some Scene {
-        WindowGroup("Deck Manager") {
+        WindowGroup("CUE") {
             RootView().environmentObject(server).frame(minWidth: 900, minHeight: 600)
         }
         .commands { DeckCommands() }

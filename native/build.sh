@@ -1,9 +1,9 @@
 #!/bin/zsh
-# Build DeckManager.app from DeckManagerApp.swift with swiftc, sign it with
-# your Developer ID (no Xcode project). Output: deck-manager/native/DeckManager.app
+# Build CUE.app from CueApp.swift with swiftc, sign it with
+# your Developer ID (no Xcode project). Output: native/CUE.app
 #
 #   cd deck-manager/native && ./build.sh
-#   open DeckManager.app
+#   open CUE.app
 #
 # Signed with a Developer ID Application cert + hardened runtime, so it launches
 # with no Gatekeeper "unsigned" prompt on this Mac. To hand it to OTHER Macs
@@ -12,31 +12,31 @@
 set -e
 cd "$(dirname "$0")"                        # deck-manager/native
 NATIVE_DIR="$(pwd)"
-APP="DeckManager.app"
+APP="CUE.app"
 BUNDLE="$APP/Contents"
 
-# ── Local, un-committed config (native/deck-manager.conf, gitignored) ─────────
+# ── Local, un-committed config (native/cue.conf, gitignored) ─────────
 # Keeps your personal path + cert out of the public repo. Example file:
 #   WORKSHOP_DIR="/Users/you/Decks"
 #   SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)"
-[ -f deck-manager.conf ] && source ./deck-manager.conf
+[ -f cue.conf ] && source ./cue.conf
 
 # The folder that holds your decks (baked into the app as its default; you can
 # still change it at runtime via File ▸ Open Workshop Folder…). Override with
-# env or deck-manager.conf. Empty ⇒ the app defaults to ~/Desktop on first run.
+# env or cue.conf. Empty ⇒ the app defaults to ~/Desktop on first run.
 : ${WORKSHOP_DIR:=""}
 
 # Signing identity. Empty ⇒ ad-hoc sign (runs locally; other Macs need it signed
-# with a real Developer ID). Override with env or deck-manager.conf.
+# with a real Developer ID). Override with env or cue.conf.
 : ${SIGN_IDENTITY:="-"}
 
-echo "▸ Compiling DeckManagerApp.swift …"
+echo "▸ Compiling CueApp.swift …"
 rm -rf "$APP"
 mkdir -p "$BUNDLE/MacOS" "$BUNDLE/Resources"
 
 swiftc -parse-as-library -O \
-    -o "$BUNDLE/MacOS/DeckManager" \
-    DeckManagerApp.swift
+    -o "$BUNDLE/MacOS/CUE" \
+    CueApp.swift
 
 cp Info.plist "$BUNDLE/Info.plist"
 
@@ -52,21 +52,21 @@ else
 fi
 
 # Optional icon.
-if [ -f AppIcon.icns ]; then
-    cp AppIcon.icns "$BUNDLE/Resources/AppIcon.icns"
+if [ -f ../brand/AppIcon.icns ]; then
+    cp ../brand/AppIcon.icns "$BUNDLE/Resources/AppIcon.icns"
     /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon" "$BUNDLE/Info.plist" 2>/dev/null || true
 fi
 
 # Real Developer ID identities get a hardened runtime + secure timestamp;
 # ad-hoc ("-") signing skips the timestamp (no timestamp service for ad-hoc).
 if [ "$SIGN_IDENTITY" = "-" ]; then
-    echo "▸ Ad-hoc signing (set SIGN_IDENTITY in deck-manager.conf for a Developer ID)"
+    echo "▸ Ad-hoc signing (set SIGN_IDENTITY in cue.conf for a Developer ID)"
     SIGN_ARGS=(--force --sign -)
 else
     echo "▸ Signing with: $SIGN_IDENTITY"
     SIGN_ARGS=(--force --options runtime --timestamp --sign "$SIGN_IDENTITY")
 fi
-codesign "${SIGN_ARGS[@]}" "$BUNDLE/MacOS/DeckManager"
+codesign "${SIGN_ARGS[@]}" "$BUNDLE/MacOS/CUE"
 codesign "${SIGN_ARGS[@]}" "$APP"
 
 echo "▸ Verifying signature …"
@@ -82,6 +82,6 @@ echo "  Launch it:  open \"$NATIVE_DIR/$APP\""
 #   xcrun notarytool store-credentials deckmanager \
 #     --apple-id "you@example.com" --team-id "YOURTEAMID" --password "xxxx-xxxx-xxxx-xxxx"
 # Then, after signing above:
-#   ditto -c -k --keepParent "$APP" "DeckManager.zip"
-#   xcrun notarytool submit "DeckManager.zip" --keychain-profile deckmanager --wait
+#   ditto -c -k --keepParent "$APP" "CUE.zip"
+#   xcrun notarytool submit "CUE.zip" --keychain-profile deckmanager --wait
 #   xcrun stapler staple "$APP"

@@ -1,14 +1,14 @@
 # Build output
-native/DeckManager.app/
-native/DeckManager
+native/CUE.app/
+native/CUE
 native/*.zip
 native/*.o
 
 # Local, machine-specific build config (paths, signing identity)
-native/deck-manager.conf
+native/cue.conf
 
 # Deck backups (written into the decks folder, but ignore if ever present here)
-.deck-manager-backups/
+.cue-backups/
 .backups/
 
 # macOS
@@ -17,3 +17,8 @@ native/deck-manager.conf
 # Node (none used, but just in case)
 node_modules/
 npm-debug.log*
+
+# Build output
+dist/CUE-portable.zip
+native/CUE.app/
+brand/AppIcon.iconset/

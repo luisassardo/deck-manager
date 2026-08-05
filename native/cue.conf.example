@@ -1,4 +1,4 @@
-# Copy to deck-manager.conf (gitignored) and edit for your machine.
+# Copy to cue.conf (gitignored) and edit for your machine.
 
 # Folder that holds your decks. Baked into the app as its default; you can still
 # change it at runtime via File ▸ Open Workshop Folder…. Leave empty to have the

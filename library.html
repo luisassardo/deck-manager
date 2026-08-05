@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Deck Manager</title>
+<title>CUE — The HTML Presentation Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
 <style>
@@ -89,8 +89,8 @@
 <body>
 <header>
   <div>
-    <h1>Deck Manager</h1>
-    <div class="sub" id="root-label">HTML presentations</div>
+    <h1>CUE</h1>
+    <div class="sub" id="root-label">The HTML Presentation Studio</div>
   </div>
   <button class="btn primary" id="new-deck">+ New deck</button>
 </header>
@@ -213,7 +213,7 @@ function card(d) {
       catch (e) { toast(e.message, true); }
     });
     mk('Delete', 'danger', async () => {
-      if (!confirm('Delete “' + d.title + '”?\n\nIt will be moved to the .deck-manager-trash folder next to your decks, so you can still recover it.')) return;
+      if (!confirm('Delete “' + d.title + '”?\n\nIt will be moved to the .cue-trash folder next to your decks, so you can still recover it.')) return;
       try { await api('/api/delete-deck', { path: d.path }); toast('Moved to trash'); load(); }
       catch (e) { toast(e.message, true); }
     });

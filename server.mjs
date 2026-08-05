@@ -1,12 +1,12 @@
 /**
- * Deck Manager — local server for creating and managing HTML presentations
+ * CUE — local server for creating and managing HTML presentations
  * built on the <deck-stage> web component. Zero npm dependencies.
  *
- *   node deck-manager/server.mjs          → http://localhost:4321
+ *   node server.mjs          → http://localhost:4321
  *
  * Routes:
  *   GET  /                      deck library
- *   GET  /__dm/<file>           deck-manager client assets (edit-mode.js, …)
+ *   GET  /__dm/<file>           CUE client assets (edit-mode.js, …)
  *   GET  /files/<path>          any file under the workshop folder; deck HTML
  *                               gets the editing/presenter scripts injected
  *                               on the fly (files on disk stay clean)
@@ -21,7 +21,7 @@
  *   POST /api/move-deck         {path, folder} → move a deck into ROOT/<folder>
  *   POST /api/hide-deck         {path, hidden} → hide/show a deck in the library
  *                               (metadata only — the file is never touched)
- *   POST /api/delete-deck       {path} → move a deck to ROOT/.deck-manager-trash
+ *   POST /api/delete-deck       {path} → move a deck to ROOT/.cue-trash
  *   POST /api/unbundle          {path} → extract a bundled single-file deck
  *   POST /api/upload            {path, name, data} → save a base64 image into
  *                               the deck's assets/ and return its relative src
@@ -29,7 +29,7 @@
  *   POST /api/sync              {deck, index, id} → fan out to sync subscribers
  *   GET  /api/pdf?path=         render deck to PDF (headless Chrome) and download
  *
- * Every write keeps a timestamped backup in deck-manager/.backups/<deck>/
+ * Every write keeps a timestamped backup in ROOT/.cue-backups/<deck>/
  * (last 20 per deck).
  *
  * Slide-position sync (presenter ⇄ slideshow ⇄ editor) goes through the SSE
@@ -47,18 +47,34 @@ import { fileURLToPath } from 'node:url';
 import { unbundle } from './unbundle.mjs';
 
 // DM_DIR = where the tool's own files live (templates, client assets).
-// ROOT   = the "workshop" folder that holds the decks. It's decoupled from the
-//          tool location via DECK_MANAGER_ROOT so the tool can live anywhere
-//          (e.g. a shared git repo) while the decks stay wherever the user
-//          keeps them. Falls back to the parent dir for in-place/dev use.
+// ROOT   = the decks folder. Decoupled from the tool location via CUE_ROOT so
+//          the tool can live anywhere (e.g. a shared git repo) while the decks
+//          stay wherever the user keeps them. Falls back to the parent dir for
+//          in-place/dev use. DECK_MANAGER_ROOT is the pre-rename name, still
+//          honoured so existing launchers keep working.
 const DM_DIR = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(process.env.DECK_MANAGER_ROOT || path.resolve(DM_DIR, '..'));
-const PORT = Number(process.env.DECK_MANAGER_PORT || 4321);
+const ROOT = path.resolve(
+  process.env.CUE_ROOT || process.env.DECK_MANAGER_ROOT || path.resolve(DM_DIR, '..'));
+const PORT = Number(process.env.CUE_PORT || process.env.DECK_MANAGER_PORT || 4321);
 // Backups live with the decks (in ROOT), never inside the tool folder, so the
 // tool's git repo stays free of deck content.
-const BACKUPS = path.join(ROOT, '.deck-manager-backups');
+const BACKUPS = path.join(ROOT, '.cue-backups');
 const MAX_BACKUPS = 20;
-const SCAN_SKIP = new Set(['ref', 'deck-manager', 'node_modules', 'uploads', 'assets']);
+
+// One-time migration of the pre-rename data folders. Renaming is atomic and
+// only runs when the new name is still free, so it can never merge or clobber.
+for (const [from, to] of [
+  ['.deck-manager-backups', '.cue-backups'],
+  ['.deck-manager-trash', '.cue-trash'],
+  ['.deck-manager.json', '.cue.json'],
+]) {
+  const src = path.join(ROOT, from);
+  const dst = path.join(ROOT, to);
+  if (fs.existsSync(src) && !fs.existsSync(dst)) {
+    try { fs.renameSync(src, dst); console.log('Migrated ' + from + ' → ' + to); } catch {}
+  }
+}
+const SCAN_SKIP = new Set(['ref', 'deck-manager', 'CUE', 'node_modules', 'uploads', 'assets']);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -109,10 +125,10 @@ async function readBody(req) {
 
 // ------------------------------------------------------------ hidden decks
 
-// Hidden decks are pure library metadata in ROOT/.deck-manager.json — hiding
+// Hidden decks are pure library metadata in ROOT/.cue.json — hiding
 // never touches the deck's files, so the TRAINING folder stays exactly as the
 // user organized it.
-const META_FILE = () => path.join(ROOT, '.deck-manager.json');
+const META_FILE = () => path.join(ROOT, '.cue.json');
 
 function readMeta() {
   try { return JSON.parse(fs.readFileSync(META_FILE(), 'utf8')) || {}; } catch { return {}; }
@@ -350,14 +366,14 @@ async function renameDeck(rel, name) {
   return { path: path.relative(ROOT, dst) };
 }
 
-/** Delete a deck by moving it to ROOT/.deck-manager-trash (reversible — the
+/** Delete a deck by moving it to ROOT/.cue-trash (reversible — the
  *  user can restore it from there or empty it). */
 async function deleteDeck(rel) {
   const file = safePath(rel);
   if (file === ROOT) throw new HttpError(400, 'Invalid target');
   const { target } = deckUnit(file);
   if (target === ROOT) throw new HttpError(400, 'Invalid target');
-  const trash = path.join(ROOT, '.deck-manager-trash');
+  const trash = path.join(ROOT, '.cue-trash');
   await fsp.mkdir(trash, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const dest = path.join(trash, stamp + '__' + path.basename(target));
@@ -637,6 +653,6 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log('Deck Manager running at http://localhost:' + PORT);
+  console.log('CUE running at http://localhost:' + PORT);
   console.log('Managing: ' + ROOT);
 });

@@ -1,14 +1,38 @@
-# Deck Manager
+# CUE — The HTML Presentation Studio
 
-A local, zero-dependency tool for creating and managing HTML presentations
-(built on the `<deck-stage>` web component) the way you would in Keynote —
-library, inline editing, presenter view, a clean screen-shareable slideshow
-window, and one-click PDF export. macOS native app + plain-browser modes.
+A local, zero-dependency studio for HTML presentations, the way you would work
+in Keynote: a library of every deck, inline editing, presenter view, a clean
+screen-shareable slideshow window, and one-click PDF export. Everything runs on
+your own machine and every change is saved straight into the deck's `.html`.
 
-![The Deck Manager library](docs/library.png)
+![The CUE library](docs/library.png)
 
-Requires [Node.js](https://nodejs.org) (any recent version). The native app
-also needs macOS + the Xcode Command Line Tools (`xcode-select --install`).
+## Get it
+
+**Trainers / anyone who just wants to use it** — download the latest release:
+
+| | |
+|---|---|
+| macOS | `CUE-macOS.dmg` — drag to Applications |
+| Windows | `CUE-Windows.zip` — unzip, run `CUE.bat` |
+| Debian / Ubuntu | `cue_<version>_amd64.deb` — `sudo apt install ./cue_*.deb` |
+| Other Linux | `CUE-linux-x64.tar.gz` |
+| Any OS, tiny download | `CUE-portable.zip` — needs [Node.js](https://nodejs.org) installed |
+
+The installers bundle their own runtime, so nothing else is needed. On first
+launch CUE asks which folder holds your presentations and remembers it.
+
+**Building from source** needs [Node.js](https://nodejs.org); the macOS app also
+needs the Xcode Command Line Tools (`xcode-select --install`).
+
+## Making decks
+
+Decks are plain HTML. **[AUTHORING.md](AUTHORING.md) is the contract** — give it
+to any AI assistant you ask to build a deck, and check the result with:
+
+```
+node cue-doctor.mjs "path/to/My Deck/My Deck.html"
+```
 
 Every deck is one manageable card; **Slideshow** opens a chromeless,
 full-bleed window you can screen-share on its own:
@@ -44,15 +68,15 @@ Two kinds of deck are recognised:
 
 ## Start
 
-- **Native app** — copy `native/deck-manager.conf.example` to
-  `native/deck-manager.conf` and set `WORKSHOP_DIR` (your decks folder) and,
+- **Native app** — copy `native/cue.conf.example` to
+  `native/cue.conf` and set `WORKSHOP_DIR` (your decks folder) and,
   optionally, `SIGN_IDENTITY` (a Developer ID for signing). Then
-  `cd native && ./build.sh` and open `DeckManager.app`. It starts the server,
+  `cd native && ./build.sh` and open `CUE.app`. It starts the server,
   shows the library, and opens the slideshow/presenter as **separate macOS
   windows** you can share individually in Zoom/Meet. (Ad-hoc-signed builds may
   need a right-click ▸ Open the first time.)
 - **Browser** — `DECK_MANAGER_ROOT=/path/to/decks node server.mjs`, then open
-  <http://localhost:4321>. Or edit `Deck Manager.command` and double-click it.
+  <http://localhost:4321>. Or edit `CUE.command` and double-click it.
 
 ## The library (home page)
 
@@ -67,7 +91,7 @@ extracts them into an editable folder (the original file is untouched).
 - **Thumbnail rail** (left): click to jump, drag to reorder. Right-click a
   thumbnail for *Skip / Move / Duplicate / New slide… / Delete*.
 - **New slide…** opens a gallery of layout templates
-  (`deck-manager/templates/slides/`). Add your own `.html` snippets there —
+  (`templates/slides/`). Add your own `.html` snippets there —
   one `<section>` per file.
 - **Double-click any text** on a slide to edit it in place. Blur or press
   Esc to finish.
@@ -85,7 +109,7 @@ extracts them into an editable folder (the original file is untouched).
   with it when you reorder or duplicate.
 - Every change is **saved to the HTML file automatically** ("Saved ✓" pill,
   bottom right). The last 20 versions of each deck are kept in a
-  `.deck-manager-backups` folder next to your decks.
+  `.cue-backups` folder next to your decks.
 
 For bigger layout/design changes, edit the deck's HTML directly (or ask
 Claude Code) — the file is plain HTML, one `<section>` per slide.
@@ -117,8 +141,8 @@ standalone (no server, no editing chrome).
 
 ## Native app (`native/`)
 
-`DeckManagerApp.swift` + `Info.plist` + `build.sh` build a
-`DeckManager.app` (SwiftUI + WKWebView) with `swiftc` — no Xcode project. It
+`CueApp.swift` + `Info.plist` + `build.sh` build a
+`CUE.app` (SwiftUI + WKWebView) with `swiftc` — no Xcode project. It
 spawns the Node server (found next to the app), shows the library, and opens
 Slideshow/Presenter as individual native windows (each shareable on its own in
 Zoom). **File ▸ Open Workshop Folder…** re-points it at a different decks
@@ -135,4 +159,4 @@ Quitting the app stops the server.
 | `presenter.js` / `presenter.html` | presenter view, slideshow window, cross-window sync (SSE) |
 | `unbundle.mjs` | import claude.ai single-file bundles (also a CLI) |
 | `templates/` | new-deck starter + slide layout gallery |
-| `native/` | SwiftUI `DeckManager.app` + `build.sh` |
+| `native/` | SwiftUI `CUE.app` + `build.sh` |

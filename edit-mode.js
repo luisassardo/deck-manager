@@ -1,5 +1,5 @@
 /**
- * edit-mode.js — Deck Manager editing layer, injected by server.mjs into
+ * edit-mode.js — CUE editing layer, injected by server.mjs into
  * every deck page served under /files/. Files on disk never reference it,
  * so decks stay portable (double-click → plain presenting).
  *
@@ -88,7 +88,7 @@
           if (!r.ok) throw new Error((await r.json()).error || r.statusText);
           status('ok', 'Saved ✓');
         } catch (e) {
-          console.error('[deck-manager] save failed:', e);
+          console.error('[cue] save failed:', e);
           status('err', 'Save failed — ' + e.message);
         }
       }, 350);
@@ -171,7 +171,7 @@
             });
             grid.appendChild(card);
           });
-        } catch (e) { console.error('[deck-manager] templates:', e); }
+        } catch (e) { console.error('[cue] templates:', e); }
       }
       picker._after = afterIndex;
       picker.setAttribute('data-open', '');
