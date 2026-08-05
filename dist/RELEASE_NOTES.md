@@ -22,6 +22,19 @@ launcher checks for it and offers the download link if it's missing. Installers
 with the runtime already bundled — `.dmg`, `.exe`, `.deb` — are built by the
 release workflow and land here too.
 
+### New in 3.1
+
+**Annotate while you present.** In the slideshow window (the one you share):
+`L` laser pointer, `P` pen, `B` black screen, `E` erase, `C` cycle colour — or
+drive it from the presenter window, where moving the mouse across the
+current-slide preview moves the laser on the shared screen and dragging draws.
+Ink is per slide and never touches the deck file.
+
+**Translate a deck side by side.** *Translate…* on a library card copies the
+deck and opens the original and the translation next to each other — slide
+text, slide names and speaker notes — with progress as you go. Only text is
+rewritten, so both language versions keep identical structure and design.
+
 ### Making decks
 
 Decks are plain HTML, one `<section>` per slide. Read **AUTHORING.md** (included

@@ -17,8 +17,8 @@ mkdir -p "$STAGE"
 
 # --- the tool itself -------------------------------------------------------
 cp server.mjs start.mjs library.html edit-mode.js external-mode.js \
-   presenter.js presenter.html unbundle.mjs cue-doctor.mjs \
-   AUTHORING.md LICENSE "$STAGE/"
+   presenter.js presenter.html annotate.js translate.html \
+   unbundle.mjs cue-doctor.mjs AUTHORING.md LICENSE "$STAGE/"
 cp -R templates "$STAGE/templates"
 mkdir -p "$STAGE/brand" && cp -R brand/icons "$STAGE/brand/icons"
 

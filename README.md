@@ -42,7 +42,7 @@ full-bleed window you can screen-share on its own:
 ## Your decks live wherever you want
 
 The tool is decoupled from your presentations. Point it at any folder of decks
-via the `DECK_MANAGER_ROOT` environment variable (browser mode) or **File ▸
+via the `CUE_ROOT` environment variable (browser mode) or **File ▸
 Open Workshop Folder…** (native app). It scans that folder for HTML decks and
 lists them — just drop a deck's `.html` (ideally in its own subfolder with its
 assets) into the folder and refresh.
@@ -75,7 +75,7 @@ Two kinds of deck are recognised:
   shows the library, and opens the slideshow/presenter as **separate macOS
   windows** you can share individually in Zoom/Meet. (Ad-hoc-signed builds may
   need a right-click ▸ Open the first time.)
-- **Browser** — `DECK_MANAGER_ROOT=/path/to/decks node server.mjs`, then open
+- **Browser** — `CUE_ROOT=/path/to/decks node server.mjs`, then open
   <http://localhost:4321>. Or edit `CUE.command` and double-click it.
 
 ## The library (home page)
@@ -122,6 +122,12 @@ Claude Code) — the file is plain HTML, one `<section>` per slide.
 
 **Presenter view** — click **Present** (or press `P`): current slide, next
 slide, notes, clock, and an elapsed timer that starts on your first advance.
+
+**Annotate live** — in the slideshow window: `L` laser pointer, `P` pen, `B`
+black screen (`W` white), `E` erase this slide (`⇧E` all), `C` cycle ink
+colour. The presenter window carries the same controls and drives them
+remotely — move the mouse across its current-slide preview to point, drag to
+draw. Ink is kept per slide and never touches the deck file.
 
 **Play Slideshow** — click **Slideshow** (or press `S`) to open a clean,
 full-bleed window with no rail, toolbar, or browser chrome. This is the
