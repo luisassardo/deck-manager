@@ -91,11 +91,12 @@ jobs:
           Copy-Item "nodetmp/node-v$env:NODE_VERSION-win-x64/node.exe" stage/CUE/node.exe
 
           # Launcher uses the bundled runtime — nothing to install.
-          @'
-@echo off
-cd /d "%~dp0"
-start "" /b "%~dp0node.exe" start.mjs %*
-'@ | Set-Content -Encoding ASCII stage/CUE/CUE.bat
+          $bat = @(
+            '@echo off',
+            'cd /d "%~dp0"',
+            'start "" /b "%~dp0node.exe" start.mjs %*'
+          )
+          Set-Content -Path stage/CUE/CUE.bat -Value $bat -Encoding ASCII
 
       - name: Zip
         shell: pwsh
