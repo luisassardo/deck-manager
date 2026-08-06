@@ -45,4 +45,4 @@ slides, so what comes back is actually editable in CUE. Validate anything with:
 node cue-doctor.mjs "path/to/My Deck/My Deck.html"
 ```
 
-Full docs: <https://github.com/luisassardo/deck-manager>
+Full docs: <https://github.com/luisassardo/cue>

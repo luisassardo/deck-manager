@@ -73,4 +73,4 @@ PDF is one page            The deck pins deck-stage with position:fixed — run
                            cue-doctor.mjs on it, it will tell you the fix.
 
 
-CUE is open source: https://github.com/luisassardo/deck-manager
+CUE is open source: https://github.com/luisassardo/cue

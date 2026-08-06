@@ -2,7 +2,7 @@
 # Build CUE.app from CueApp.swift with swiftc, sign it with
 # your Developer ID (no Xcode project). Output: native/CUE.app
 #
-#   cd deck-manager/native && ./build.sh
+#   cd native && ./build.sh
 #   open CUE.app
 #
 # Signed with a Developer ID Application cert + hardened runtime, so it launches
@@ -10,7 +10,7 @@
 # warning-free, notarize it too — see the commented block at the end.
 
 set -e
-cd "$(dirname "$0")"                        # deck-manager/native
+cd "$(dirname "$0")"                        # CUE/native
 NATIVE_DIR="$(pwd)"
 APP="CUE.app"
 BUNDLE="$APP/Contents"
