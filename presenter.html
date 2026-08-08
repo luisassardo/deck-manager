@@ -3,42 +3,68 @@
 <head>
 <meta charset="UTF-8">
 <title>Presenter</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;600&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet">
+<link rel="icon" href="/__dm/brand/icons/32x32.png">
+<link rel="stylesheet" href="/__dm/cue.css">
 <style>
-  :root { --bg:#0A0E1A; --blue:#4F8EF7; --grn:#10B981; --amb:#F59E0B; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; }
-  body { background: #06090f; color: #fff; font-family: 'DM Sans', sans-serif; display: flex; flex-direction: column; overflow: hidden; }
-  header { display: flex; align-items: center; gap: 24px; padding: 12px 20px; border-bottom: 1px solid rgba(79,142,247,.18); flex-shrink: 0; }
-  .title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .spacer { flex: 1; }
-  .clockbox { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: rgba(255,255,255,.6); display: flex; gap: 20px; align-items: center; }
-  .elapsed { color: var(--amb); font-size: 20px; font-weight: 600; min-width: 96px; text-align: right; }
-  .tbtn { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; padding: 7px 12px;
-    border-radius: 5px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.05); color: rgba(255,255,255,.75); cursor: pointer; }
-  .tbtn:hover { border-color: var(--blue); color: #fff; }
-  .tbtn.primary { border-color: rgba(16,185,129,.5); color: var(--grn); }
-  .anngroup { display: flex; gap: 6px; padding-right: 4px; margin-right: 2px;
-    border-right: 1px solid rgba(255,255,255,.12); }
-  .tbtn.ann { min-width: 34px; padding: 7px 10px; }
-  .tbtn.ann.on { background: #4F8EF7; border-color: #4F8EF7; color: #06101f; }
-  main { flex: 1; display: grid; grid-template-columns: 1fr 380px; gap: 16px; padding: 16px 20px; min-height: 0; }
-  .cur { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-  .frame { position: relative; background: #000; border: 1px solid rgba(79,142,247,.25); border-radius: 8px; overflow: hidden; flex: 1; min-height: 0; }
-  .frame iframe { width: 1920px; height: 1080px; border: 0; transform-origin: 0 0; position: absolute; top: 50%; left: 50%; pointer-events: none; }
-  .lab { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,.4); margin: 0 0 8px 2px; }
-  aside { display: flex; flex-direction: column; gap: 16px; min-height: 0; }
-  .next .frame { aspect-ratio: 16/9; flex: none; }
-  .notes { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-  .notes .body { flex: 1; overflow: auto; background: rgba(79,142,247,.05); border: 1px solid rgba(79,142,247,.2);
-    border-radius: 8px; padding: 16px 18px; font-size: 17px; line-height: 1.55; color: rgba(255,255,255,.88); white-space: pre-wrap; }
-  .notes .body:empty::before { content: 'No notes for this slide.'; color: rgba(255,255,255,.3); }
-  footer { display: flex; align-items: center; gap: 16px; padding: 10px 20px 14px; flex-shrink: 0; }
-  .count { font-family: 'JetBrains Mono', monospace; font-size: 15px; color: rgba(255,255,255,.7); }
-  .hint { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(255,255,255,.3); }
-  .navbtn { font-size: 18px; width: 42px; height: 34px; border-radius: 5px; border: 1px solid rgba(255,255,255,.2);
-    background: rgba(255,255,255,.05); color: #fff; cursor: pointer; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { height:100%; }
+  body { background:var(--cue-canvas); color:var(--cue-ink); font-family:var(--cue-sans);
+    -webkit-font-smoothing:antialiased; display:flex; flex-direction:column; overflow:hidden; }
+
+  header { display:flex; align-items:center; gap:18px; padding:12px 18px;
+    border-bottom:1px solid var(--cue-line); flex-shrink:0; }
+  .title { font-size:15px; font-weight:550; letter-spacing:-.015em;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .spacer { flex:1; }
+  .clockbox { display:flex; align-items:center; gap:14px;
+    font-family:var(--cue-mono); font-size:13px; color:var(--cue-ink-3); }
+  .elapsed { font-size:19px; font-weight:500; color:var(--cue-ink);
+    min-width:82px; text-align:right; font-variant-numeric:tabular-nums; }
+
+  /* header controls share the toolbar treatment */
+  .tbtn { font-family:var(--cue-sans); font-size:12px; color:var(--cue-ink-2);
+    background:transparent; border:1px solid var(--cue-line); border-radius:var(--cue-r-md);
+    padding:7px 11px; cursor:pointer;
+    transition:color .3s var(--cue-ease), background .3s var(--cue-ease), border-color .3s var(--cue-ease); }
+  .tbtn:hover { color:var(--cue-ink); background:var(--cue-raised-2); }
+  .tbtn:focus-visible { outline:2px solid var(--cue-focus); outline-offset:2px; }
+  .tbtn.primary { color:var(--cue-ink); background:var(--cue-raised-3); }
+  .tbtn.primary:hover { background:#2C2C31; }
+  .anngroup { display:flex; gap:6px; padding-right:12px; margin-right:2px;
+    border-right:1px solid var(--cue-line); }
+  .tbtn.ann { min-width:34px; padding:7px 9px; }
+  /* the one place colour is allowed: an armed annotation tool */
+  .tbtn.ann.on { color:var(--cue-canvas); background:var(--cue-ink); border-color:var(--cue-ink); }
+
+  main { flex:1; display:grid; grid-template-columns:minmax(0,1fr) 372px; gap:14px;
+    padding:14px 18px; min-height:0; }
+  .cur { display:flex; flex-direction:column; min-width:0; min-height:0; }
+  .frame { position:relative; background:#000; border:1px solid var(--cue-line);
+    border-radius:var(--cue-r-md); overflow:hidden; flex:1; min-height:0; }
+  .frame iframe { width:1920px; height:1080px; border:0; transform-origin:0 0;
+    position:absolute; pointer-events:none; }
+  .lab { font-size:12px; color:var(--cue-ink-3); margin:0 0 7px 2px; }
+  aside { display:flex; flex-direction:column; gap:14px; min-height:0; }
+  .next .frame { aspect-ratio:16/9; flex:none; }
+  .notes { flex:1; display:flex; flex-direction:column; min-height:0; }
+  .notes .body { flex:1; overflow:auto; background:var(--cue-raised);
+    border:1px solid var(--cue-line); border-radius:var(--cue-r-md);
+    padding:15px 17px; font-size:16px; line-height:1.6; color:var(--cue-ink);
+    white-space:pre-wrap; }
+  .notes .body:empty::before { content:'No notes for this slide.'; color:var(--cue-ink-3); }
+
+  footer { display:flex; align-items:center; gap:14px; padding:8px 18px 12px; flex-shrink:0; }
+  .count { font-family:var(--cue-mono); font-size:14px; color:var(--cue-ink-2);
+    font-variant-numeric:tabular-nums; }
+  .hint { font-family:var(--cue-mono); font-size:11px; color:var(--cue-ink-3); }
+  .navbtn { font-size:16px; width:40px; height:32px; border-radius:var(--cue-r-md);
+    border:1px solid var(--cue-line); background:var(--cue-raised-2); color:var(--cue-ink);
+    cursor:pointer; transition:background .3s var(--cue-ease); }
+  .navbtn:hover { background:var(--cue-raised-3); }
+  .navbtn:focus-visible { outline:2px solid var(--cue-focus); outline-offset:2px; }
+
+  @media (prefers-reduced-motion:reduce){ .tbtn,.navbtn{transition:none} }
+  @media (max-width:900px){ main{grid-template-columns:1fr; grid-template-rows:1fr auto} }
 </style>
 </head>
 <body>
@@ -48,8 +74,8 @@
   <div class="clockbox">
     <span id="clock">--:--</span>
     <span class="elapsed" id="elapsed">00:00</span>
-    <button class="tbtn" id="timer-toggle">START</button>
-    <button class="tbtn" id="timer-reset">RESET</button>
+    <button class="tbtn" id="timer-toggle">Start</button>
+    <button class="tbtn" id="timer-reset">Reset</button>
   </div>
   <span class="anngroup">
     <button class="tbtn ann" id="ann-laser">◉</button>
@@ -57,7 +83,7 @@
     <button class="tbtn ann" id="ann-black" title="Black the shared screen (B)">■</button>
     <button class="tbtn ann" id="ann-clear" title="Erase the ink on this slide (E)">Erase</button>
   </span>
-  <button class="tbtn primary" id="audience">▶ PLAY SLIDESHOW ⧉</button>
+  <button class="tbtn primary" id="audience">Play slideshow</button>
 </header>
 <main>
   <div class="cur">
@@ -267,13 +293,13 @@
     if (tick) return;
     t0 = Date.now();
     tick = setInterval(() => { elapsed.textContent = fmt(acc + Date.now() - t0); }, 500);
-    toggle.textContent = 'PAUSE';
+    toggle.textContent = 'Pause';
   }
   function pauseTimer() {
     if (!tick) return;
     acc += Date.now() - t0;
     clearInterval(tick); tick = null;
-    toggle.textContent = 'START';
+    toggle.textContent = 'Start';
   }
   function startTimerOnce() { if (!tick && acc === 0) startTimer(); }
   toggle.addEventListener('click', () => (tick ? pauseTimer() : startTimer()));

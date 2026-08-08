@@ -1,0 +1,164 @@
+/* CUE — shared design tokens and components. Served at /__dm/cue.css.
+ *
+ * Direction: "Darkroom". The chrome is achromatic on purpose. Decks bring
+ * their own colour (terracotta, lime, cyan, violet…) and a tinted frame
+ * distorts every one of them, so the frame stays neutral graphite and the
+ * accent is spent only on state: focus, danger, success. Nothing here is
+ * coloured for decoration.
+ *
+ * Every token is --cue-* prefixed. This file is safe to load into a deck
+ * page (the editor does exactly that) because it declares no bare element
+ * selectors and cannot collide with a deck's own custom properties.
+ *
+ * Typefaces are the operating system's own, so CUE renders correctly with no
+ * network at all — the same rule AUTHORING.md sets for decks.
+ */
+
+:root {
+  /* surface ramp */
+  --cue-canvas:#0B0B0C;
+  --cue-raised:#131315;
+  --cue-raised-2:#17171A;
+  --cue-raised-3:#232327;
+  --cue-line:#26262A;
+  --cue-line-soft:#FFFFFF0F;
+  --cue-line-strong:#34343A;
+
+  /* text */
+  --cue-ink:#F4F4F5;
+  --cue-ink-2:#A1A1A6;
+  --cue-ink-3:#6E6E76;
+
+  /* state only — never decoration. semantic, not brand. */
+  --cue-focus:#F4F4F5;
+  --cue-danger:#F2646B;
+  --cue-ok:#5BD6A0;
+  --cue-warn:#E8B45C;
+
+  /* three radii, locked */
+  --cue-r-lg:14px;
+  --cue-r-md:8px;
+  --cue-r-pill:999px;
+
+  --cue-ease:cubic-bezier(.32,.72,0,1);
+  --cue-sans:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",
+    system-ui,Roboto,"Helvetica Neue",Arial,sans-serif;
+  --cue-mono:ui-monospace,"SF Mono","JetBrains Mono","Cascadia Mono",
+    Menlo,Consolas,monospace;
+}
+
+/* ---------------------------------------------------------------- buttons */
+.cue-btn {
+  font-family:var(--cue-sans); font-size:13px; font-weight:500;
+  color:var(--cue-ink); background:var(--cue-raised-2);
+  border:1px solid var(--cue-line); border-radius:var(--cue-r-md);
+  padding:8px 15px; cursor:pointer;
+  transition:background .4s var(--cue-ease), border-color .4s var(--cue-ease);
+}
+.cue-btn:hover { background:#202024; border-color:var(--cue-line-strong); }
+
+/* quiet action, used in dense rows and on cards */
+.cue-act {
+  font-family:var(--cue-sans); font-size:12px; color:var(--cue-ink-3);
+  background:transparent; border:1px solid transparent;
+  border-radius:var(--cue-r-md); padding:5px 9px; cursor:pointer;
+  transition:color .35s var(--cue-ease), background .35s var(--cue-ease);
+}
+.cue-act:hover { color:var(--cue-ink); background:var(--cue-raised-3); }
+.cue-act--primary {
+  color:var(--cue-ink); background:var(--cue-raised-3); border-color:var(--cue-line);
+}
+.cue-act--primary:hover { background:#2C2C31; }
+.cue-act--danger:hover { color:var(--cue-danger); background:#2A1E20; }
+
+/* one focus treatment everywhere */
+.cue-btn:focus-visible,
+.cue-act:focus-visible,
+.cue-input:focus-visible,
+[class^="cue-"]:focus-visible {
+  outline:2px solid var(--cue-focus); outline-offset:2px;
+}
+
+/* ------------------------------------------------------------------ cards */
+/* Double bezel: an outer tray holds an inner plate at a concentric radius,
+   so a deck thumbnail reads as a plate in a machined frame. */
+.cue-card {
+  background:var(--cue-raised); border:1px solid var(--cue-line-soft);
+  border-radius:var(--cue-r-lg); padding:6px;
+  transition:background .5s var(--cue-ease), border-color .5s var(--cue-ease),
+    transform .5s var(--cue-ease);
+}
+.cue-card:hover {
+  background:var(--cue-raised-2); border-color:#FFFFFF1F; transform:translateY(-2px);
+}
+.cue-plate {
+  position:relative; aspect-ratio:16/9;
+  border-radius:calc(var(--cue-r-lg) - 6px);
+  overflow:hidden; background:#000; box-shadow:inset 0 1px 0 #FFFFFF14;
+}
+
+/* ------------------------------------------------------- section headings */
+/* Sentence case. The old uppercase-mono eyebrow on every heading was the
+   most templated thing about the previous interface. */
+.cue-sect { display:flex; align-items:baseline; gap:12px; margin:44px 0 18px; }
+.cue-sect h2 {
+  font-size:15px; font-weight:600; color:var(--cue-ink);
+  letter-spacing:-.01em; margin:0;
+}
+.cue-sect .cue-n { font-family:var(--cue-mono); font-size:11px; color:var(--cue-ink-3); }
+.cue-rule { flex:1; height:1px; background:var(--cue-line); opacity:.55; }
+
+/* ------------------------------------------------------- data + metadata */
+.cue-meta {
+  font-family:var(--cue-mono); font-size:11px; color:var(--cue-ink-3);
+  display:flex; align-items:center; gap:7px;
+}
+.cue-tag {
+  border:1px solid var(--cue-line); border-radius:var(--cue-r-pill);
+  padding:1px 7px; font-size:10px; color:var(--cue-ink-2);
+}
+.cue-tag--warn { border-color:#4A3A1C; color:var(--cue-warn); }
+
+/* ------------------------------------------------------- inputs + status */
+.cue-input {
+  width:100%; background:#0F0F11; color:var(--cue-ink);
+  border:1px solid var(--cue-line); border-radius:var(--cue-r-md);
+  padding:9px 11px; font:15px/1.5 var(--cue-sans);
+}
+.cue-input:focus { outline:none; border-color:var(--cue-line-strong); background:#141417; }
+
+/* transient status pill (saving / saved / failed) */
+.cue-pill {
+  position:fixed; bottom:16px; right:18px; z-index:9000;
+  font-family:var(--cue-mono); font-size:12px;
+  padding:8px 14px; border-radius:var(--cue-r-md);
+  background:rgba(19,19,21,.95); border:1px solid var(--cue-line);
+  color:var(--cue-ink-2); opacity:0; transition:opacity .25s var(--cue-ease);
+  pointer-events:none; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+}
+.cue-pill[data-on] { opacity:1; }
+.cue-pill[data-kind="ok"] { color:var(--cue-ok); border-color:#1E3A2E; }
+.cue-pill[data-kind="err"] { color:var(--cue-danger); border-color:#3A1E22; }
+
+/* --------------------------------------------------------------- toolbar */
+/* Floating chrome that sits on top of a deck. Deliberately quiet: it shares
+   the screen with someone else's design. */
+.cue-bar {
+  display:flex; gap:6px; padding:6px;
+  background:rgba(11,11,12,.88); border:1px solid var(--cue-line);
+  border-radius:var(--cue-r-md);
+  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+}
+.cue-bar button {
+  font-family:var(--cue-sans); font-size:12px; font-weight:450;
+  color:var(--cue-ink-2); background:transparent; border:1px solid transparent;
+  border-radius:6px; padding:6px 10px; cursor:pointer;
+  transition:color .3s var(--cue-ease), background .3s var(--cue-ease);
+}
+.cue-bar button:hover { color:var(--cue-ink); background:var(--cue-raised-3); }
+.cue-bar button[data-active] { color:var(--cue-ink); background:var(--cue-raised-3); }
+
+@media (prefers-reduced-motion:reduce) {
+  .cue-btn, .cue-act, .cue-card, .cue-pill, .cue-bar button { transition:none; }
+  .cue-card:hover { transform:none; }
+}

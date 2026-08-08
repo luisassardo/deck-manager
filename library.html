@@ -3,100 +3,93 @@
 <head>
 <meta charset="UTF-8">
 <title>CUE — The HTML Presentation Studio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
+<link rel="icon" href="/__dm/brand/icons/32x32.png">
+<link rel="stylesheet" href="/__dm/cue.css">
 <style>
-  :root { --bg:#0A0E1A; --blue:#4F8EF7; --grn:#10B981; --amb:#F59E0B; --red:#F43F5E; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: #fff; font-family: 'DM Sans', sans-serif; min-height: 100vh; }
-  body::before { content:''; position: fixed; inset: 0; pointer-events: none;
-    background: linear-gradient(rgba(79,142,247,.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(79,142,247,.04) 1px, transparent 1px);
-    background-size: 80px 80px; }
-  header { display: flex; align-items: center; justify-content: space-between;
-    padding: 36px 48px 28px; border-bottom: 1px solid rgba(79,142,247,.15); position: relative; }
-  header::before { content:''; position: absolute; top:0; left:0; right:0; height:3px;
-    background: linear-gradient(90deg, var(--blue), transparent); }
-  h1 { font-family: 'Syne', sans-serif; font-size: 34px; font-weight: 800; letter-spacing: -1px; }
-  .sub { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 2px;
-    text-transform: uppercase; color: rgba(79,142,247,.7); margin-top: 6px; }
-  .btn { font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 1px;
-    padding: 10px 20px; border-radius: 6px; border: 1px solid rgba(79,142,247,.4);
-    background: rgba(79,142,247,.1); color: #fff; cursor: pointer; }
-  .btn:hover { background: rgba(79,142,247,.22); }
-  .btn.primary { background: var(--blue); border-color: var(--blue); color: #06101f; font-weight: 600; }
-  .btn.primary:hover { filter: brightness(1.1); }
-  main { padding: 40px 48px; position: relative; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 28px; }
-  .ghead { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600;
-    letter-spacing: 3px; text-transform: uppercase; color: rgba(79,142,247,.85);
-    margin: 44px 0 18px; padding-bottom: 10px; border-bottom: 1px solid rgba(79,142,247,.15);
-    display: flex; align-items: center; gap: 10px; }
-  .ghead::before { content: '▸'; color: rgba(79,142,247,.5); }
-  #groups > .grid:first-child { margin-top: 0; }
-  #groups > .grid { margin-bottom: 8px; min-height: 30px; border-radius: 12px; }
-  /* Drag & drop */
-  .card[draggable="true"] { cursor: grab; }
-  .card.dragging { opacity: .45; }
-  .ghead.drop-hint { color: #fff; border-bottom-color: var(--blue); background: rgba(79,142,247,.12); border-radius: 6px; }
-  .grid.drop-hint { outline: 2px dashed rgba(79,142,247,.6); outline-offset: 8px; }
-  #dropnew { display: none; position: fixed; left: 50%; transform: translateX(-50%); bottom: 22px;
-    z-index: 60; padding: 16px 26px; border-radius: 10px; font-family: 'JetBrains Mono', monospace;
-    font-size: 13px; letter-spacing: .5px; color: rgba(255,255,255,.85);
-    background: rgba(10,14,26,.95); border: 1.5px dashed rgba(79,142,247,.6); }
-  body.dm-dragging #dropnew { display: block; }
-  #dropnew.drop-hint { border-color: var(--grn); color: #fff; background: rgba(16,185,129,.15); }
-  #groups > .grid:empty { display: none; }
-  body.dm-dragging #groups > .grid:empty { display: block; min-height: 56px;
-    outline: 1.5px dashed rgba(79,142,247,.35); outline-offset: -1px; }
-  body.dm-dragging #groups > .grid:empty::before { content: 'Top level — drop here';
-    display: block; padding: 18px; font-family: 'JetBrains Mono', monospace; font-size: 12px;
-    letter-spacing: 1px; color: rgba(79,142,247,.6); }
-  /* Hidden section */
-  .ghead.hid-head { color: rgba(245,158,11,.85); border-bottom-color: rgba(245,158,11,.2); cursor: pointer; user-select: none; }
-  .ghead.hid-head::before { content: '⌀'; color: rgba(245,158,11,.5); }
-  .hid-grid .card { opacity: .75; }
-  .card { background: rgba(79,142,247,.04); border: 1px solid rgba(79,142,247,.18);
-    border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
-  .card:hover { border-color: rgba(79,142,247,.45); }
-  .thumb { position: relative; aspect-ratio: 16/9; background: #000; overflow: hidden; cursor: pointer; }
-  .thumb iframe { width: 1920px; height: 1080px; border: 0; transform-origin: 0 0; pointer-events: none; background: #000; }
-  .thumb .veil { position: absolute; inset: 0; }
-  .meta { padding: 18px 20px 8px; }
-  .title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: -.3px; }
-  .info { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px;
-    color: rgba(255,255,255,.4); margin-top: 6px; }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; margin-left: 8px;
-    background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.4); color: var(--amb); }
-  .badge.ext { background: rgba(167,139,250,.12); border-color: rgba(167,139,250,.45); color: #A78BFA; }
-  .actions { display: flex; gap: 8px; padding: 14px 20px 18px; flex-wrap: wrap; }
-  .act { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; letter-spacing: .5px;
-    padding: 7px 13px; border-radius: 5px; border: 1px solid rgba(255,255,255,.15);
-    background: rgba(255,255,255,.04); color: rgba(255,255,255,.75); cursor: pointer; }
-  .act:hover { border-color: rgba(79,142,247,.6); color: #fff; }
-  .act.go { border-color: rgba(16,185,129,.45); color: var(--grn); }
-  .act.go:hover { background: rgba(16,185,129,.1); }
-  .act.danger { border-color: rgba(244,63,94,.4); color: var(--red); }
-  .act.danger:hover { background: rgba(244,63,94,.12); border-color: var(--red); color: #fff; }
-  .empty { color: rgba(255,255,255,.45); font-size: 17px; padding: 60px 0; text-align: center; }
-  .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 8px;
-    background: #101a2e; border: 1px solid rgba(79,142,247,.4); font-size: 14px;
-    opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 50; }
-  .toast[data-on] { opacity: 1; }
-  .toast[data-err] { border-color: rgba(244,63,94,.6); color: #ffb3c0; }
+  /* Page-specific only. Tokens and shared components live in cue.css. */
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--cue-canvas); color:var(--cue-ink);
+    font-family:var(--cue-sans); -webkit-font-smoothing:antialiased; min-height:100vh; }
+
+  header { display:flex; align-items:center; gap:13px;
+    padding:36px 44px 0; max-width:1560px; margin:0 auto; }
+  .mark { width:26px; height:26px; border-radius:7px; }
+  h1 { font-size:21px; font-weight:600; letter-spacing:-.025em; }
+  .count { font-family:var(--cue-mono); font-size:12px; color:var(--cue-ink-3); }
+  .grow { flex:1; }
+
+  main { padding:8px 44px 90px; max-width:1560px; margin:0 auto; }
+  .cue-sect:first-child { margin-top:30px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr));
+    gap:22px; min-height:24px; border-radius:var(--cue-r-lg); }
+
+  .thumb { cursor:pointer; }
+  .thumb iframe { width:1920px; height:1080px; border:0; transform-origin:0 0;
+    pointer-events:none; background:#000; }
+  .thumb .veil { position:absolute; inset:0; }
+
+  .body { padding:14px 10px 4px; }
+  .title { font-size:15px; font-weight:550; letter-spacing:-.01em; line-height:1.35; }
+  .cue-meta { margin-top:6px; }
+  .acts { display:flex; gap:6px; padding:10px 8px 6px; }
+  .acts .more { margin-left:auto; letter-spacing:.08em; }
+
+  /* drag and drop between groups */
+  .cue-card[draggable="true"] { cursor:grab; }
+  .cue-card.dragging { opacity:.4; }
+  .cue-sect.drop-hint h2 { color:var(--cue-ink); }
+  .cue-sect.drop-hint .cue-rule { background:var(--cue-ink-3); opacity:1; }
+  .grid.drop-hint { outline:2px dashed var(--cue-line-strong); outline-offset:8px; }
+  #dropnew { display:none; position:fixed; left:50%; transform:translateX(-50%);
+    bottom:22px; z-index:60; padding:14px 22px; border-radius:var(--cue-r-md);
+    font-size:13px; color:var(--cue-ink-2); background:rgba(19,19,21,.96);
+    border:1.5px dashed var(--cue-line-strong);
+    -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
+  body.dm-dragging #dropnew { display:block; }
+  #dropnew.drop-hint { border-color:var(--cue-ink-2); color:var(--cue-ink); }
+  body.dm-dragging .grid:empty { min-height:56px;
+    outline:1.5px dashed var(--cue-line); outline-offset:-1px; }
+
+  /* hidden decks */
+  .cue-sect.hid-head { cursor:pointer; user-select:none; }
+  .cue-sect.hid-head h2 { color:var(--cue-ink-2); }
+  .hid-grid .cue-card { opacity:.6; }
+  .hid-grid .cue-card:hover { opacity:1; }
+
+  .menu { position:fixed; z-index:80; min-width:186px; padding:5px;
+    display:flex; flex-direction:column; gap:1px;
+    background:var(--cue-raised-2); border:1px solid var(--cue-line);
+    border-radius:var(--cue-r-md); box-shadow:0 14px 40px rgba(0,0,0,.55); }
+  .menu button { font:13px/1 var(--cue-sans); text-align:left; color:var(--cue-ink-2);
+    background:transparent; border:0; border-radius:6px; padding:9px 11px; cursor:pointer; }
+  .menu button:hover { background:var(--cue-raised-3); color:var(--cue-ink); }
+  .menu button:focus-visible { outline:2px solid var(--cue-focus); outline-offset:-2px; }
+
+  .empty { color:var(--cue-ink-3); font-size:16px; padding:70px 0; text-align:center; }
+  .toast { position:fixed; bottom:22px; right:22px; z-index:70;
+    padding:11px 17px; border-radius:var(--cue-r-md); font-size:14px;
+    background:var(--cue-raised-2); border:1px solid var(--cue-line);
+    color:var(--cue-ink); opacity:0; transition:opacity .25s var(--cue-ease);
+    pointer-events:none; }
+  .toast[data-on] { opacity:1; }
+  .toast[data-err] { border-color:#3A1E22; color:var(--cue-danger); }
+
+  @media (prefers-reduced-motion:reduce){ .toast{transition:none} }
+  @media (max-width:760px){ header,main{padding-left:18px;padding-right:18px}
+    .grid{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
 <header>
-  <div>
-    <h1>CUE</h1>
-    <div class="sub" id="root-label">The HTML Presentation Studio</div>
-  </div>
-  <button class="btn primary" id="new-deck">+ New deck</button>
+  <img class="mark" src="/__dm/brand/icons/64x64.png" alt="">
+  <h1>CUE</h1>
+  <span class="count" id="root-label">…</span>
+  <span class="grow"></span>
+  <button class="cue-btn" id="new-deck">New deck</button>
 </header>
 <main>
   <div id="groups"></div>
-  <div id="dropnew">⤵ Drop here to move into a <b>new folder</b>…</div>
+  <div id="dropnew">Drop here to move into a new folder</div>
   <div class="empty" id="empty" hidden>No presentations found in this folder yet.</div>
 </main>
 <div class="toast" id="toast"></div>
@@ -133,12 +126,44 @@ function fmtDate(ms) {
   return new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/* Overflow menu for a card's secondary actions. One menu element is reused,
+   positioned under whichever button opened it, and closed on the next click,
+   Escape, scroll or resize. */
+let menuEl = null;
+function closeMenu() { if (menuEl) { menuEl.remove(); menuEl = null; } }
+function openMenu(anchor, items) {
+  const wasOpen = menuEl && menuEl.dataset.owner === anchor.dataset.id;
+  closeMenu();
+  if (wasOpen) return;
+  menuEl = document.createElement('div');
+  menuEl.className = 'menu';
+  anchor.dataset.id = anchor.dataset.id || String(Math.random());
+  menuEl.dataset.owner = anchor.dataset.id;
+  items.forEach((it) => {
+    const b = document.createElement('button');
+    if (it.cls) b.className = it.cls;
+    b.textContent = it.label;
+    b.addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); it.fn(); });
+    menuEl.appendChild(b);
+  });
+  document.body.appendChild(menuEl);
+  const r = anchor.getBoundingClientRect();
+  const w = menuEl.offsetWidth, h = menuEl.offsetHeight;
+  menuEl.style.left = Math.max(8, Math.min(r.right - w, innerWidth - w - 8)) + 'px';
+  menuEl.style.top = (r.bottom + h + 8 > innerHeight ? r.top - h - 6 : r.bottom + 6) + 'px';
+  menuEl.querySelector('button').focus();
+}
+addEventListener('click', closeMenu);
+addEventListener('scroll', closeMenu, true);
+addEventListener('resize', closeMenu);
+addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
+
 function card(d) {
   const el = document.createElement('div');
-  el.className = 'card';
+  el.className = 'cue-card';
 
   const thumb = document.createElement('div');
-  thumb.className = 'thumb';
+  thumb.className = 'cue-plate thumb';
   const frame = document.createElement('iframe');
   // _snthumb makes deck-stage suppress its rail; loading=lazy keeps big
   // decks from all booting at once.
@@ -151,46 +176,49 @@ function card(d) {
   thumb.addEventListener('click', () => { location.href = deckUrl(d); });
 
   const meta = document.createElement('div');
-  meta.className = 'meta';
+  meta.className = 'body';
   const title = document.createElement('div');
   title.className = 'title';
   title.textContent = d.title;
   const info = document.createElement('div');
-  info.className = 'info';
+  info.className = 'cue-meta';
   info.textContent = (d.slides != null ? d.slides + ' slides · ' : '') + fmtDate(d.mtime);
   if (d.bundled || d.external) {
     const b = document.createElement('span');
-    b.className = 'badge' + (d.external ? ' ext' : '');
-    b.textContent = d.bundled ? 'BUNDLED' : 'EXTERNAL';
+    b.className = 'cue-tag' + (d.external ? ' cue-tag--warn' : '');
+    b.textContent = d.bundled ? 'bundled' : 'external';
     b.title = d.external ? 'A self-contained deck with its own slide engine — open, present as a window, and manage it here; deep editing is deck-stage-only.' : '';
     info.appendChild(b);
   }
   meta.append(title, info);
 
   const actions = document.createElement('div');
-  actions.className = 'actions';
+  actions.className = 'acts';
   const mk = (label, cls, fn) => {
     const b = document.createElement('button');
-    b.className = 'act' + (cls ? ' ' + cls : '');
+    b.className = 'cue-act' + (cls ? ' ' + cls : '');
     b.textContent = label;
     b.addEventListener('click', fn);
     actions.appendChild(b);
   };
-  // Duplicate / Rename / Delete work on any deck (file/folder operations).
+  // Secondary actions live behind an overflow so a card shows three controls
+  // instead of seven. mkMore() collects them; buildMore() renders the menu.
+  const extra = [];
+  const mkMore = (label, fn, cls) => extra.push({ label, fn, cls });
   const addManageButtons = () => {
-    mk('Duplicate', '', async () => {
+    mkMore('Duplicate', async () => {
       const name = prompt('Name for the copy:', d.title + ' copy');
       if (!name) return;
       try { await api('/api/duplicate-deck', { path: d.path, name }); toast('Duplicated'); load(); }
       catch (e) { toast(e.message, true); }
     });
-    mk('Rename', '', async () => {
+    mkMore('Rename', async () => {
       const name = prompt('New name:', d.title);
       if (!name || name === d.title) return;
       try { await api('/api/rename-deck', { path: d.path, name }); toast('Renamed'); load(); }
       catch (e) { toast(e.message, true); }
     });
-    mk('Move…', '', async () => {
+    mkMore('Move to folder…', async () => {
       const hint = allGroups.length ? '\nExisting folders: ' + allGroups.join(' · ') : '';
       const folder = prompt('Move to folder (leave empty for the top level).' + hint, d.group || '');
       if (folder === null || folder.trim() === (d.group || '')) return;
@@ -199,7 +227,7 @@ function card(d) {
     });
     // Copy the deck, then open the side-by-side translation editor. Structure
     // is never touched — only text — so both language versions stay in step.
-    mk('Translate…', '', async () => {
+    mkMore('Translate…', async () => {
       const lang = prompt('Language or suffix for the translation:\n(the copy is named "' +
         d.title + ' (…)")', 'ES');
       if (!lang || !lang.trim()) return;
@@ -213,7 +241,7 @@ function card(d) {
     });
     // Hiding is library metadata only — the deck's files stay exactly where
     // they are. Real deletion lives in the Hidden section.
-    mk('Hide', '', async () => {
+    mkMore('Hide', async () => {
       try { await api('/api/hide-deck', { path: d.path, hidden: true }); toast('Hidden — find it in the Hidden section below'); load(); }
       catch (e) { toast(e.message, true); }
     });
@@ -221,19 +249,19 @@ function card(d) {
 
   if (d.hidden) {
     // Hidden-section card: restore, or truly remove (to the recoverable trash).
-    mk('Open', '', () => { location.href = deckUrl(d); });
-    mk('Unhide', 'go', async () => {
+    mk('Open', 'cue-act--primary', () => { location.href = deckUrl(d); });
+    mk('Unhide', 'cue-act--primary', async () => {
       try { await api('/api/hide-deck', { path: d.path, hidden: false }); toast('Restored to the library'); load(); }
       catch (e) { toast(e.message, true); }
     });
-    mk('Delete', 'danger', async () => {
+    mk('Delete', 'cue-act--danger', async () => {
       if (!confirm('Delete “' + d.title + '”?\n\nIt will be moved to the .cue-trash folder next to your decks, so you can still recover it.')) return;
       try { await api('/api/delete-deck', { path: d.path }); toast('Moved to trash'); load(); }
       catch (e) { toast(e.message, true); }
     });
   } else if (d.bundled) {
-    mk('View', '', () => { location.href = deckUrl(d); });
-    mk('Import to edit', 'go', async () => {
+    mk('View', 'cue-act--primary', () => { location.href = deckUrl(d); });
+    mk('Import to edit', 'cue-act--primary', async () => {
       try {
         const r = await api('/api/unbundle', { path: d.path });
         toast('Imported → ' + r.path);
@@ -242,16 +270,26 @@ function card(d) {
     });
   } else if (d.external) {
     // Non-deck-stage deck: open / share as a window / export; no deck-stage editing.
-    mk('Open', '', () => { location.href = deckUrl(d); });
-    mk('Window', 'go', () => { window.open(deckUrl(d), 'dm-ext-' + d.path); });
-    mk('PDF', '', () => { window.open(pdfUrl(d), '_blank'); });
+    mk('Open', 'cue-act--primary', () => { location.href = deckUrl(d); });
+    mk('Window', '', () => { window.open(deckUrl(d), 'dm-ext-' + d.path); });
+    mkMore('Export PDF', () => { window.open(pdfUrl(d), '_blank'); });
     addManageButtons();
   } else {
-    mk('Open', '', () => { location.href = deckUrl(d); });
-    mk('Slideshow', 'go', () => { window.open(slideshowUrl(d), 'dm-slideshow-' + d.path); });
-    mk('Present', 'go', () => { window.open(presenterUrl(d), '_blank'); });
-    mk('PDF', '', () => { window.open(pdfUrl(d), '_blank'); });
+    mk('Open', 'cue-act--primary', () => { location.href = deckUrl(d); });
+    mk('Slideshow', '', () => { window.open(slideshowUrl(d), 'dm-slideshow-' + d.path); });
+    mk('Present', '', () => { window.open(presenterUrl(d), '_blank'); });
+    mkMore('Export PDF', () => { window.open(pdfUrl(d), '_blank'); });
     addManageButtons();
+  }
+
+  if (extra.length) {
+    const more = document.createElement('button');
+    more.className = 'cue-act more';
+    more.textContent = '\u00b7\u00b7\u00b7';
+    more.title = 'More actions';
+    more.setAttribute('aria-haspopup', 'true');
+    more.addEventListener('click', (e) => { e.stopPropagation(); openMenu(more, extra); });
+    actions.appendChild(more);
   }
 
   el.append(thumb, meta, actions);
@@ -304,6 +342,8 @@ async function load() {
   try {
     const decks = await api('/api/decks');
     const visible = decks.filter((d) => !d.hidden);
+    document.getElementById('root-label').textContent =
+      visible.length + (visible.length === 1 ? ' deck' : ' decks');
     const hiddenDecks = decks.filter((d) => d.hidden);
     allGroups = [...new Set(visible.map((d) => d.group).filter(Boolean))].sort();
     // Section per group folder; top-level (ungrouped) decks come first. The
@@ -322,13 +362,18 @@ async function load() {
       const wrap = document.createElement('div');
       wrap.className = 'grid';
       byGroup.get(g).forEach((d) => wrap.appendChild(card(d)));
-      if (g) {
-        const h = document.createElement('h2');
-        h.className = 'ghead';
-        h.textContent = g;
-        dropTarget(h, (d) => dropMove(d, g));
-        frag.appendChild(h);
-      }
+      const h = document.createElement('div');
+      h.className = 'cue-sect';
+      const t = document.createElement('h2');
+      t.textContent = g || 'Ungrouped';
+      const n = document.createElement('span');
+      n.className = 'cue-n';
+      n.textContent = byGroup.get(g).length;
+      const rule = document.createElement('span');
+      rule.className = 'cue-rule';
+      h.append(t, n, rule);
+      dropTarget(h, (d) => dropMove(d, g));
+      frag.appendChild(h);
       dropTarget(wrap, (d) => dropMove(d, g));
       frag.appendChild(wrap);
     }
@@ -337,10 +382,17 @@ async function load() {
     // here offer Unhide / Delete; dropping a card on the header hides it.
     if (hiddenDecks.length) {
       const open = localStorage.getItem('dm.hiddenOpen') === '1';
-      const h = document.createElement('h2');
-      h.className = 'ghead hid-head';
-      h.textContent = 'Hidden (' + hiddenDecks.length + ') ' + (open ? '▾' : '▸');
-      h.title = 'Decks hidden from the library — files untouched. Click to expand; drop a card here to hide it.';
+      const h = document.createElement('div');
+      h.className = 'cue-sect hid-head';
+      const ht = document.createElement('h2');
+      ht.textContent = (open ? '▾' : '▸') + '  Hidden';
+      const hn = document.createElement('span');
+      hn.className = 'cue-n';
+      hn.textContent = hiddenDecks.length;
+      const hr = document.createElement('span');
+      hr.className = 'cue-rule';
+      h.append(ht, hn, hr);
+      h.title = 'Hidden from the library; the files are untouched. Click to expand, or drop a card here to hide it.';
       const wrap = document.createElement('div');
       wrap.className = 'grid hid-grid';
       wrap.hidden = !open;
@@ -348,7 +400,7 @@ async function load() {
       h.addEventListener('click', () => {
         wrap.hidden = !wrap.hidden;
         localStorage.setItem('dm.hiddenOpen', wrap.hidden ? '0' : '1');
-        h.textContent = 'Hidden (' + hiddenDecks.length + ') ' + (wrap.hidden ? '▸' : '▾');
+        ht.textContent = (wrap.hidden ? '▸' : '▾') + '  Hidden';
       });
       dropTarget(h, async (d) => {
         try { await api('/api/hide-deck', { path: d.path, hidden: true }); toast('Hidden'); load(); }

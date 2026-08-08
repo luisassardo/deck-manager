@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CUE · Studio</title>
+<!-- PROTOTYPE — Direction C. Throwaway; the live library is untouched.
+     Swiss industrial print: unbleached paper, carbon ink, one red for
+     structure and vital marks. Oversized numerals carry the layout.
+     The tool is paper; every presenting surface stays dark, so the stage
+     and the workshop are unmistakably different places. -->
+<style>
+  :root {
+    --paper:#F4F4F0; --paper-2:#EAE8E3;
+    --ink:#0A0A0A; --ink-2:#55534E; --ink-3:#8A877F;
+    --red:#E61919;
+    --grot:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",system-ui,sans-serif;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,monospace;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; border-radius:0 !important; }
+  body { background:var(--paper); color:var(--ink); font-family:var(--grot);
+    -webkit-font-smoothing:antialiased; min-height:100vh; }
+
+  header { border-bottom:2px solid var(--ink); padding:22px 32px 16px;
+    display:flex; align-items:flex-end; gap:18px; }
+  .id { font-size:34px; font-weight:800; letter-spacing:-.045em; line-height:.85; }
+  .sub { font-family:var(--mono); font-size:10px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--ink-2); padding-bottom:3px; }
+  .grow { flex:1; }
+  .tally { font-family:var(--mono); font-size:10px; letter-spacing:.14em; color:var(--ink-2); padding-bottom:3px; }
+  .btn { font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+    background:var(--ink); color:var(--paper); border:0; padding:9px 16px; cursor:pointer; }
+  .btn:hover { background:var(--red); }
+
+  /* section header: oversized index numeral is structure, not decoration */
+  .sect { display:flex; align-items:baseline; gap:16px; padding:34px 32px 12px; }
+  .idx { font-size:52px; font-weight:800; letter-spacing:-.05em; line-height:.8; color:var(--red); }
+  .sect h2 { font-size:19px; font-weight:700; letter-spacing:-.02em; }
+  .rule { flex:1; height:2px; background:var(--ink); align-self:center; }
+  .cnt { font-family:var(--mono); font-size:10px; letter-spacing:.14em; color:var(--ink-2); }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(316px,1fr));
+    border-top:1px solid var(--ink); margin:0 32px; }
+  .item { border-bottom:1px solid var(--ink); border-right:1px solid var(--ink);
+    padding:16px; display:flex; flex-direction:column; gap:12px; }
+  .item:hover { background:var(--paper-2); }
+
+  .plate { position:relative; aspect-ratio:16/9; overflow:hidden; background:#000;
+    border:1px solid var(--ink); cursor:pointer; }
+  .plate iframe { width:1920px; height:1080px; border:0; transform-origin:0 0; pointer-events:none; }
+
+  .head { display:flex; align-items:flex-start; gap:12px; }
+  .no { font-family:var(--mono); font-size:11px; color:var(--red); letter-spacing:.08em; padding-top:3px; }
+  .title { font-size:17px; font-weight:700; letter-spacing:-.02em; line-height:1.15; flex:1; }
+  .slides { font-size:30px; font-weight:800; letter-spacing:-.045em; line-height:.85; }
+  .slides i { font-family:var(--mono); font-style:normal; font-size:9.5px; font-weight:400;
+    letter-spacing:.14em; color:var(--ink-2); display:block; margin-top:5px; }
+
+  .footrow { border-top:1px solid var(--ink); padding-top:10px; display:flex;
+    flex-direction:column; gap:9px; }
+  .metaline { display:flex; align-items:center; gap:8px; }
+  .date { font-family:var(--mono); font-size:10px; letter-spacing:.08em; color:var(--ink-2);
+    white-space:nowrap; }
+  .flag { font-family:var(--mono); font-size:9px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--paper); background:var(--red); padding:2px 6px; }
+
+  .ops { display:flex; gap:6px; }
+  .ops .op:last-child { margin-left:auto; }
+  .op { font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase;
+    background:transparent; color:var(--ink); border:1px solid var(--ink); padding:6px 9px; cursor:pointer; }
+  .op:hover { background:var(--ink); color:var(--paper); }
+  .op.key { background:var(--ink); color:var(--paper); }
+  .op.key:hover { background:var(--red); }
+  .op:focus-visible { outline:2px solid var(--red); outline-offset:2px; }
+
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important} }
+  @media (max-width:760px){ header,.sect{padding-left:16px;padding-right:16px}
+    .grid{grid-template-columns:1fr;margin:0 16px} .idx{font-size:38px} }
+</style>
+</head>
+<body>
+<header>
+  <span class="id">CUE</span>
+  <span class="sub">The HTML Presentation Studio</span>
+  <span class="grow"></span>
+  <span class="tally" id="tally">…</span>
+  <button class="btn">New deck</button>
+</header>
+<main id="main"></main>
+
+<script>
+const fmt = ms => new Date(ms).toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
+const url = p => '/files/' + p.split('/').map(encodeURIComponent).join('/');
+
+function item(d,i){
+  const el=document.createElement('div'); el.className='item';
+
+  const plate=document.createElement('div'); plate.className='plate';
+  const f=document.createElement('iframe'); f.src=url(d.path)+'?_snthumb=1#1'; f.loading='lazy'; f.tabIndex=-1;
+  plate.appendChild(f);
+  new ResizeObserver(()=>{ f.style.transform='scale('+(plate.clientWidth/1920)+')'; }).observe(plate);
+
+  const head=document.createElement('div'); head.className='head';
+  head.innerHTML='<span class="no">'+String(i+1).padStart(2,'0')+'</span>'+
+    '<span class="title"></span>'+
+    '<span class="slides">'+(d.slides!=null?d.slides:'--')+'<i>slides</i></span>';
+  head.querySelector('.title').textContent=d.title;
+
+  const foot=document.createElement('div'); foot.className='footrow';
+  const left=document.createElement('div'); left.className='metaline';
+  left.innerHTML='<span class="date">'+fmt(d.mtime)+'</span>';
+  if(d.external){ const b=document.createElement('span'); b.className='flag'; b.textContent='external'; left.appendChild(b); }
+  const ops=document.createElement('div'); ops.className='ops';
+  [['Open','key'],['Show',''],['Present',''],['···','']].forEach(([l,c])=>{
+    const b=document.createElement('button'); b.className='op'+(c?' '+c:''); b.textContent=l; ops.appendChild(b);
+  });
+  foot.append(left,ops);
+
+  el.append(plate,head,foot);
+  return el;
+}
+
+(async () => {
+  const decks=await (await fetch('/api/decks')).json();
+  const vis=decks.filter(d=>!d.hidden);
+  document.getElementById('tally').textContent=vis.length+' DECKS';
+  const by=new Map();
+  vis.forEach(d=>{const g=d.group||'';if(!by.has(g))by.set(g,[]);by.get(g).push(d);});
+  const keys=[...by.keys()].sort((a,b)=> a===''?-1 : b===''?1 : a.localeCompare(b));
+  const main=document.getElementById('main');
+  keys.forEach((g,gi)=>{
+    const s=document.createElement('div'); s.className='sect';
+    s.innerHTML='<span class="idx">'+String(gi+1).padStart(2,'0')+'</span>'+
+      '<h2>'+(g||'Loose decks')+'</h2><span class="rule"></span>'+
+      '<span class="cnt">'+by.get(g).length+'</span>';
+    main.appendChild(s);
+    const grid=document.createElement('div'); grid.className='grid';
+    by.get(g).forEach((d,i)=>grid.appendChild(item(d,i)));
+    main.appendChild(grid);
+  });
+})();
+</script>
+</body>
+</html>

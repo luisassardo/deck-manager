@@ -16,7 +16,7 @@ OUT="$ROOT/dist/CUE-portable.zip"
 mkdir -p "$STAGE"
 
 # --- the tool itself -------------------------------------------------------
-cp server.mjs start.mjs library.html edit-mode.js external-mode.js \
+cp server.mjs start.mjs library.html cue.css edit-mode.js external-mode.js \
    presenter.js presenter.html annotate.js translate.html \
    unbundle.mjs cue-doctor.mjs AUTHORING.md LICENSE "$STAGE/"
 cp -R templates "$STAGE/templates"

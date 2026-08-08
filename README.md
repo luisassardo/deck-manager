@@ -159,6 +159,15 @@ Zoom). **File ▸ Open Workshop Folder…** re-points it at a different decks
 folder. Needs Node installed (found automatically in the usual locations).
 Quitting the app stops the server.
 
+## Interface
+
+CUE's chrome is deliberately achromatic. Decks bring their own colour, and a
+tinted frame distorts them, so the tool stays neutral graphite and colour is
+spent only on state: focus, saving, danger. Tokens and shared components live
+in `cue.css` (all `--cue-*` prefixed, so the stylesheet is safe to load over a
+deck). Typefaces are the operating system's own, which means CUE renders
+correctly with no network at all — the same rule `AUTHORING.md` sets for decks.
+
 ## Pieces
 
 | File | Role |
@@ -170,3 +179,5 @@ Quitting the app stops the server.
 | `unbundle.mjs` | import claude.ai single-file bundles (also a CLI) |
 | `templates/` | new-deck starter + slide layout gallery |
 | `native/` | SwiftUI `CUE.app` + `build.sh` |
+| `cue.css` | shared design tokens and components for every CUE surface |
+| `prototypes/` | throwaway design explorations, kept for reference |

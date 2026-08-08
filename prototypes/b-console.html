@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CUE · Console</title>
+<!-- PROTOTYPE — Direction B. Throwaway; the live library is untouched.
+     Tactical telemetry: phosphor on deactivated-CRT black, hazard red as the
+     ONLY accent, mono dominant, zero radius. Structure comes from
+     grid gap:1px over a contrasting parent, not from borders.
+     The library reads as a manifest: deck health is first-class data. -->
+<style>
+  :root {
+    --sub:#0A0A0A;            /* substrate */
+    --panel:#101012;
+    --line:#26262A;
+    --fg:#EAEAEA;             /* phosphor */
+    --fg-2:#8A8A90;
+    --fg-3:#5A5A60;
+    --red:#E61919;            /* hazard: the only accent */
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,monospace;
+    --grot:-apple-system,BlinkMacSystemFont,"SF Pro Display",system-ui,sans-serif;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; border-radius:0 !important; }
+  body { background:var(--sub); color:var(--fg); font-family:var(--mono);
+    -webkit-font-smoothing:antialiased; min-height:100vh; }
+  /* CRT sweep, fixed so it never repaints on scroll */
+  body::after { content:''; position:fixed; inset:0; z-index:60; pointer-events:none;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.16) 2px,rgba(0,0,0,.16) 4px);
+    opacity:.5; }
+
+  header { border-bottom:1px solid var(--line); padding:16px 26px;
+    display:flex; align-items:center; gap:20px; }
+  .id { font-family:var(--grot); font-weight:800; font-size:20px; letter-spacing:-.03em; }
+  .sys { font-size:10.5px; letter-spacing:.16em; color:var(--fg-3); text-transform:uppercase; }
+  .grow { flex:1; }
+  .rev { font-size:10.5px; letter-spacing:.12em; color:var(--fg-3); }
+  .btn { font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--fg); background:transparent; border:1px solid var(--line); padding:8px 14px; cursor:pointer; }
+  .btn:hover { border-color:var(--red); color:var(--red); }
+
+  .sect { padding:26px 26px 8px; display:flex; align-items:center; gap:12px; }
+  .sect h2 { font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--fg); }
+  .sect .n { font-size:10.5px; color:var(--red); }
+  .rule { flex:1; height:1px; background:var(--line); }
+
+  /* razor-thin dividers from grid gap over a contrasting parent */
+  .manifest { background:var(--line); display:grid; gap:1px; margin:0 26px 8px; border:1px solid var(--line); }
+  .row { background:var(--sub); display:grid; grid-template-columns:156px minmax(0,1fr) 76px 96px 148px auto;
+    align-items:center; gap:18px; padding:10px 14px; transition:background .12s linear; }
+  .row:hover { background:#141416; }
+
+  .plate { position:relative; width:156px; aspect-ratio:16/9; overflow:hidden; background:#000;
+    border:1px solid var(--line); cursor:pointer; }
+  .plate iframe { width:1920px; height:1080px; border:0; transform-origin:0 0; pointer-events:none; }
+  /* corner crosshairs */
+  .plate span { position:absolute; width:7px; height:7px; border-color:var(--red); border-style:solid; }
+  .plate .tl{top:2px;left:2px;border-width:1px 0 0 1px}
+  .plate .br{bottom:2px;right:2px;border-width:0 1px 1px 0}
+
+  .name { font-family:var(--grot); font-size:15px; font-weight:650; letter-spacing:-.015em; }
+  .path { font-size:10px; color:var(--fg-3); margin-top:4px; letter-spacing:.04em;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .num { font-size:12px; color:var(--fg-2); letter-spacing:.06em; }
+  .num b { color:var(--fg); font-weight:400; font-size:15px; }
+  .stat { font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; white-space:nowrap; }
+  .ok { color:var(--fg-2); }
+  .ok::before { content:'[ OK ] '; color:var(--fg-3); }
+  .ext { color:var(--red); }
+  .ext::before { content:'[ ! ] '; }
+
+  .ops { display:flex; gap:0; }
+  .op { font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--fg-3); background:transparent; border:1px solid transparent; padding:7px 10px; cursor:pointer; }
+  .op:hover { color:var(--fg); border-color:var(--line); }
+  .op.go:hover { color:var(--red); border-color:var(--red); }
+  .op:focus-visible { outline:1px solid var(--red); outline-offset:1px; }
+
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important} }
+  @media (max-width:900px){
+    .row{grid-template-columns:1fr;gap:10px} .plate{width:100%}
+    .manifest,.sect{margin-left:14px;margin-right:14px;padding-left:0;padding-right:0}
+  }
+</style>
+</head>
+<body>
+<header>
+  <span class="id">CUE</span>
+  <span class="sys">Presentation Control</span>
+  <span class="grow"></span>
+  <span class="rev" id="rev">…</span>
+  <button class="btn">+ New deck</button>
+</header>
+<main id="main"></main>
+
+<script>
+const fmt = ms => new Date(ms).toISOString().slice(0,10);
+const url = p => '/files/' + p.split('/').map(encodeURIComponent).join('/');
+
+function row(d){
+  const el=document.createElement('div'); el.className='row';
+
+  const plate=document.createElement('div'); plate.className='plate';
+  const f=document.createElement('iframe'); f.src=url(d.path)+'?_snthumb=1#1'; f.loading='lazy'; f.tabIndex=-1;
+  plate.appendChild(f);
+  plate.insertAdjacentHTML('beforeend','<span class="tl"></span><span class="br"></span>');
+  new ResizeObserver(()=>{ f.style.transform='scale('+(plate.clientWidth/1920)+')'; }).observe(plate);
+
+  const id=document.createElement('div');
+  id.innerHTML='<div class="name"></div><div class="path"></div>';
+  id.querySelector('.name').textContent=d.title;
+  id.querySelector('.path').textContent=d.path;
+
+  const n=document.createElement('div'); n.className='num';
+  n.innerHTML = d.slides!=null ? '<b>'+String(d.slides).padStart(2,'0')+'</b> SL' : '<b>--</b>';
+
+  const dt=document.createElement('div'); dt.className='num'; dt.style.fontSize='11px'; dt.textContent=fmt(d.mtime);
+
+  const st=document.createElement('div');
+  st.className='stat '+(d.external?'ext':'ok');
+  st.textContent = d.external ? 'EXTERNAL' : 'DECK-STAGE';
+
+  const ops=document.createElement('div'); ops.className='ops';
+  [['Open',''],['Show','go'],['Present','go'],['···','']].forEach(([l,c])=>{
+    const b=document.createElement('button'); b.className='op'+(c?' '+c:''); b.textContent=l; ops.appendChild(b);
+  });
+
+  el.append(plate,id,n,dt,st,ops);
+  return el;
+}
+
+(async () => {
+  const decks=await (await fetch('/api/decks')).json();
+  const vis=decks.filter(d=>!d.hidden);
+  document.getElementById('rev').textContent='UNITS '+String(vis.length).padStart(2,'0')+' / REV 3.1.1';
+  const by=new Map();
+  vis.forEach(d=>{const g=d.group||'';if(!by.has(g))by.set(g,[]);by.get(g).push(d);});
+  const keys=[...by.keys()].sort((a,b)=> a===''?-1 : b===''?1 : a.localeCompare(b));
+  const main=document.getElementById('main');
+  for (const g of keys){
+    const s=document.createElement('div'); s.className='sect';
+    s.innerHTML='<h2>'+(g||'Root')+'</h2><span class="n">'+String(by.get(g).length).padStart(2,'0')+
+      '</span><span class="rule"></span>';
+    main.appendChild(s);
+    const man=document.createElement('div'); man.className='manifest';
+    by.get(g).forEach(d=>man.appendChild(row(d)));
+    main.appendChild(man);
+  }
+})();
+</script>
+</body>
+</html>

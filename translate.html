@@ -3,61 +3,59 @@
 <head>
 <meta charset="UTF-8">
 <title>CUE — Translate</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;600&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet">
+<link rel="icon" href="/__dm/brand/icons/32x32.png">
+<link rel="stylesheet" href="/__dm/cue.css">
 <style>
-  :root { --bg:#0A0E1A; --blue:#4F8EF7; --grn:#10B981; --amb:#F59E0B; --red:#F43F5E; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: #fff; font-family: 'DM Sans', sans-serif; min-height: 100vh; }
-  header { position: sticky; top: 0; z-index: 10; background: rgba(10,14,26,.96);
-    border-bottom: 1px solid rgba(79,142,247,.18); padding: 16px 32px;
-    display: flex; align-items: center; gap: 20px; }
-  h1 { font-family: 'Syne', sans-serif; font-size: 19px; font-weight: 700; }
-  .pair { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: rgba(255,255,255,.5); margin-top: 4px; }
-  .pair b { color: var(--blue); font-weight: 600; }
-  .spacer { flex: 1; }
-  .prog { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: rgba(255,255,255,.6); text-align: right; }
-  .bar { width: 190px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.12); margin-top: 6px; overflow: hidden; }
-  .bar i { display: block; height: 100%; background: var(--grn); width: 0; transition: width .25s; }
-  .btn { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .5px;
-    padding: 9px 16px; border-radius: 6px; border: 1px solid rgba(79,142,247,.4);
-    background: rgba(79,142,247,.12); color: #fff; cursor: pointer; }
-  .btn:hover { background: rgba(79,142,247,.25); }
-  main { padding: 26px 32px 80px; max-width: 1500px; }
-  .slide { margin-bottom: 34px; }
-  .shead { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 2.5px;
-    text-transform: uppercase; color: rgba(79,142,247,.85); padding-bottom: 8px;
-    border-bottom: 1px solid rgba(79,142,247,.16); margin-bottom: 4px; }
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 12px 2px;
-    border-bottom: 1px solid rgba(255,255,255,.05); align-items: start; }
-  .row:hover { background: rgba(79,142,247,.03); }
-  .src { font-size: 16px; line-height: 1.5; color: rgba(255,255,255,.6); white-space: pre-wrap;
-    padding: 9px 11px; border-left: 2px solid rgba(255,255,255,.12); }
-  .tgt { position: relative; }
-  .tgt textarea { width: 100%; min-height: 42px; resize: vertical; background: rgba(255,255,255,.045);
-    border: 1px solid rgba(255,255,255,.14); border-radius: 6px; color: #fff; padding: 9px 11px;
-    font: 16px/1.5 'DM Sans', system-ui, sans-serif; }
-  .tgt textarea:focus { outline: none; border-color: var(--blue); background: rgba(79,142,247,.08); }
-  .row[data-same] .tgt textarea { border-color: rgba(245,158,11,.35); }
-  .row[data-done] .tgt textarea { border-color: rgba(16,185,129,.4); }
-  .kind { position: absolute; top: -9px; right: 8px; font-family: 'JetBrains Mono', monospace;
-    font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; padding: 1px 7px;
-    border-radius: 3px; background: #101a2e; border: 1px solid rgba(79,142,247,.35); color: rgba(79,142,247,.9); }
-  .tools { display: flex; gap: 8px; margin-top: 5px; }
-  .mini { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; padding: 3px 8px;
-    border-radius: 4px; border: 1px solid rgba(255,255,255,.14); background: none;
-    color: rgba(255,255,255,.5); cursor: pointer; }
-  .mini:hover { color: #fff; border-color: var(--blue); }
-  .pill { position: fixed; bottom: 18px; right: 22px; font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; padding: 9px 15px; border-radius: 6px; background: rgba(10,14,26,.95);
-    border: 1px solid rgba(79,142,247,.4); color: #9cc0ff; opacity: 0; transition: opacity .2s; }
-  .pill[data-on] { opacity: 1; }
-  .pill[data-kind="ok"] { color: #6ee7b7; border-color: rgba(16,185,129,.5); }
-  .pill[data-kind="err"] { color: #ffb3c0; border-color: rgba(244,63,94,.6); }
-  .note { color: rgba(255,255,255,.45); font-size: 15px; padding: 40px 0; }
-  .warn { background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.35);
-    border-radius: 8px; padding: 14px 18px; margin-bottom: 22px; font-size: 15px; color: #ffd699; }
-  iframe.hidden { position: absolute; width: 1920px; height: 1080px; left: -99999px; top: 0; border: 0; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--cue-canvas); color:var(--cue-ink); font-family:var(--cue-sans);
+    -webkit-font-smoothing:antialiased; min-height:100vh; }
+
+  header { position:sticky; top:0; z-index:10; background:rgba(11,11,12,.96);
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--cue-line); padding:15px 32px;
+    display:flex; align-items:center; gap:20px; }
+  h1 { font-size:17px; font-weight:600; letter-spacing:-.02em; }
+  .pair { font-family:var(--cue-mono); font-size:11.5px; color:var(--cue-ink-3); margin-top:4px; }
+  .pair b { color:var(--cue-ink-2); font-weight:400; }
+  .spacer { flex:1; }
+  .prog { font-family:var(--cue-mono); font-size:11.5px; color:var(--cue-ink-3);
+    text-align:right; font-variant-numeric:tabular-nums; }
+  .bar { width:184px; height:4px; border-radius:var(--cue-r-pill);
+    background:var(--cue-line); margin-top:6px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:var(--cue-ok); width:0;
+    transition:width .35s var(--cue-ease); }
+
+  main { padding:24px 32px 90px; max-width:1500px; }
+  .slide { margin-bottom:30px; }
+  .shead { font-size:13px; font-weight:600; color:var(--cue-ink-2);
+    padding-bottom:8px; border-bottom:1px solid var(--cue-line); margin-bottom:2px; }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:11px 2px;
+    border-bottom:1px solid var(--cue-line-soft); align-items:start; }
+  .row:hover { background:#0F0F11; }
+  .src { font-size:15.5px; line-height:1.55; color:var(--cue-ink-3); white-space:pre-wrap;
+    padding:9px 11px; border-left:2px solid var(--cue-line); }
+  .tgt { position:relative; }
+  .tgt textarea { min-height:42px; resize:vertical; }
+  /* state, not decoration: untouched vs done */
+  .row[data-same] .cue-input { border-color:#4A3A1C; }
+  .row[data-done] .cue-input { border-color:#1E3A2E; }
+  .kind { position:absolute; top:-8px; right:9px; font-family:var(--cue-mono);
+    font-size:9px; letter-spacing:.08em; padding:1px 7px; border-radius:var(--cue-r-pill);
+    background:var(--cue-raised-2); border:1px solid var(--cue-line); color:var(--cue-ink-3); }
+  .tools { display:flex; gap:8px; margin-top:6px; }
+  .mini { font-family:var(--cue-sans); font-size:11.5px; padding:3px 8px;
+    border-radius:6px; border:1px solid transparent; background:transparent;
+    color:var(--cue-ink-3); cursor:pointer; }
+  .mini:hover { color:var(--cue-ink); background:var(--cue-raised-3); }
+  .mini:focus-visible { outline:2px solid var(--cue-focus); outline-offset:1px; }
+
+  .note { color:var(--cue-ink-3); font-size:15px; padding:44px 0; }
+  .warn { background:#1E1A12; border:1px solid #4A3A1C; border-radius:var(--cue-r-md);
+    padding:13px 17px; margin-bottom:20px; font-size:14.5px; color:var(--cue-warn); }
+  iframe.hidden { position:absolute; width:1920px; height:1080px; left:-99999px; top:0; border:0; }
+
+  @media (prefers-reduced-motion:reduce){ .bar i{transition:none} }
+  @media (max-width:860px){ .row{grid-template-columns:1fr} main,header{padding-left:16px;padding-right:16px} }
 </style>
 </head>
 <body>
@@ -71,10 +69,10 @@
     <div class="prog" id="prog">—</div>
     <div class="bar"><i id="barfill"></i></div>
   </div>
-  <button class="btn" id="open-target">Open translated deck ⧉</button>
+  <button class="cue-btn" id="open-target">Open translation</button>
 </header>
 <main><div class="note" id="status">Loading both decks…</div><div id="rows"></div></main>
-<div class="pill" id="pill"></div>
+<div class="cue-pill" id="pill"></div>
 
 <script>
 (async () => {
@@ -213,6 +211,7 @@
       t.appendChild(k);
     }
     const ta = document.createElement('textarea');
+    ta.className = 'cue-input';
     ta.value = getDst();
     ta.rows = Math.min(8, Math.max(1, Math.ceil(srcText.length / 60)));
     t.appendChild(ta);
